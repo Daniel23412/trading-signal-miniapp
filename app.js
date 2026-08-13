@@ -33,11 +33,29 @@
       return;
     }
 
+    const I18N = window.AI_I18N || {};
+    function normalizeLocale(value) {
+      const raw = String(value || "").toLowerCase().replace("_", "-").split("-")[0];
+      if (I18N[raw]) return raw;
+      if (raw === "ua") return "uk";
+      if (raw === "cn") return "zh";
+      return "ru";
+    }
+    function currentLocale() {
+      const fromStorage = localStorage.getItem("ai_signal_locale");
+      const fromTelegram = tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.language_code;
+      return normalizeLocale(fromStorage || fromTelegram || navigator.language || "ru");
+    }
+    function t(key, fallback) {
+      const locale = currentLocale();
+      const value = I18N[locale] && I18N[locale][key];
+      const english = I18N.en && I18N.en[key];
+      return value !== undefined ? value : (english !== undefined ? english : fallback);
+    }
+
     els.tgBadge.textContent = tg && tg.initData ? "TELEGRAM" : "BROWSER";
     document.documentElement.dataset.js = "ready";
 
-    // The upload area is a native <label for=fileInput>, so iOS can open Photos
-    // without depending on a synthetic click. We only prevent drag/drop defaults here.
     els.input.addEventListener("change", (e) => handleFile(e.target.files && e.target.files[0]));
     els.removeImage.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); resetImage(); });
     els.analyze.addEventListener("click", analyze);
@@ -76,11 +94,13 @@
 
     async function handleFile(file) {
       if (!file) return;
-      if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) return toast("Поддерживаются JPG, PNG и WEBP.");
-      if (file.size > 12 * 1024 * 1024) return toast("Исходный файл слишком большой.");
+      if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) return toast(t("supported", "JPG, PNG and WEBP are supported."));
+      if (file.size > 12 * 1024 * 1024) return toast(t("sourceTooLarge", "The source file is too large."));
+      els.uploadBox.classList.add("is-reading");
+      haptic("impact");
       try {
         const dataUrl = await compressImage(file, 1600, 0.84);
-        if (dataUrl.length > 3000000) return toast("Не удалось достаточно уменьшить изображение.");
+        if (dataUrl.length > 3000000) return toast(t("compressFailed", "The image could not be reduced enough."));
         state.image = dataUrl;
         els.preview.src = dataUrl;
         els.loadingPreview.src = dataUrl;
@@ -90,7 +110,9 @@
         haptic("success");
       } catch (e) {
         console.error(e);
-        toast("Не удалось прочитать изображение.");
+        toast(t("readFailed", "Could not read the image."));
+      } finally {
+        els.uploadBox.classList.remove("is-reading");
       }
     }
 
@@ -101,15 +123,36 @@
       els.uploadBox.classList.remove("hidden");
       els.previewWrap.classList.add("hidden");
       els.analyze.disabled = true;
+      els.analyze.classList.remove("is-launching");
     }
 
     async function analyze() {
-      if (!state.image) return toast("Сначала загрузите скрин графика.");
+      if (!state.image) return toast(t("uploadFirst", "Upload a chart screenshot first."));
+
+      const startedAt = performance.now();
+      const minLoadingMs = 2200;
+      els.analyze.classList.add("is-launching");
+      setTimeout(() => els.analyze.classList.remove("is-launching"), 720);
+
       showScreen("screenLoading");
       haptic("impact");
-      const messages = ["Проверяю структуру цены…", "Смотрю локальный тренд…", "Оцениваю качество сетапа…"];
+
+      const fallbackMessages = ["Checking price structure…", "Reading the local trend…", "Evaluating setup quality…"];
+      const messages = Array.isArray(t("loadingMessages", fallbackMessages)) ? t("loadingMessages", fallbackMessages) : fallbackMessages;
       let i = 0;
-      const timer = setInterval(() => { i = (i + 1) % messages.length; els.loadingText.textContent = messages[i]; }, 1100);
+      els.loadingText.textContent = messages[0] || fallbackMessages[0];
+
+      const textTimer = setInterval(() => {
+        i = (i + 1) % messages.length;
+        els.loadingText.classList.add("is-changing");
+        setTimeout(() => {
+          els.loadingText.textContent = messages[i];
+          els.loadingText.classList.remove("is-changing");
+        }, 120);
+      }, 1050);
+
+      const hapticTimer = setInterval(() => haptic("selection"), 1250);
+
       try {
         const response = await fetch("/api/analyze", {
           method: "POST",
@@ -118,49 +161,68 @@
             image: state.image,
             timeframe: state.timeframe,
             expiration: state.expiration,
+            locale: currentLocale(),
             tgInitData: tg && tg.initData ? tg.initData : ""
           })
         });
+
         let data;
         try { data = await response.json(); }
-        catch { throw new Error("Сервер вернул некорректный ответ."); }
-        if (!response.ok) throw new Error((data && data.message) || readableApiError(data && data.error, data && data.reason));
+        catch { throw new Error(t("serverInvalid", "The server returned an invalid response.")); }
+
+        if (!response.ok) {
+          throw new Error(readableApiError(data && data.error, data && data.reason, data && data.message));
+        }
+
+        const elapsed = performance.now() - startedAt;
+        if (elapsed < minLoadingMs) await delay(minLoadingMs - elapsed);
+
         renderResult(data.result, data.meta);
         haptic(data.result.signal === "NO_SIGNAL" ? "warning" : "success");
         showScreen("screenResult");
       } catch (error) {
         console.error(error);
         showScreen("screenInput");
-        toast(error.message || "Ошибка анализа. Попробуйте ещё раз.");
+        toast(error.message || t("retry", "Analysis error. Try again."));
         haptic("error");
       } finally {
-        clearInterval(timer);
+        clearInterval(textTimer);
+        clearInterval(hapticTimer);
       }
     }
 
     function renderResult(result, meta) {
       els.resultCard.className = "result-card";
+      els.resultIcon.className = "result-icon";
+
       if (result.signal === "UP") {
         els.resultCard.classList.add("up");
-        els.resultIcon.textContent = "↑";
-        els.resultTitle.textContent = "ВВЕРХ";
-        els.resultSub.textContent = "Направление выражено на текущем скриншоте";
+        els.resultIcon.classList.add("asset-arrow", "arrow-up");
+        els.resultIcon.textContent = "";
+        els.resultTitle.textContent = t("up", "UP");
+        els.resultSub.textContent = t("directionShown", "Direction is visible on the current screenshot");
       } else if (result.signal === "DOWN") {
         els.resultCard.classList.add("down");
-        els.resultIcon.textContent = "↓";
-        els.resultTitle.textContent = "ВНИЗ";
-        els.resultSub.textContent = "Направление выражено на текущем скриншоте";
+        els.resultIcon.classList.add("asset-arrow", "arrow-down");
+        els.resultIcon.textContent = "";
+        els.resultTitle.textContent = t("down", "DOWN");
+        els.resultSub.textContent = t("directionShown", "Direction is visible on the current screenshot");
       } else {
         els.resultCard.classList.add("neutral");
         els.resultIcon.textContent = "•";
-        els.resultTitle.textContent = "НЕТ СИГНАЛА";
-        els.resultSub.textContent = result.invalid_chart ? "Не удалось надёжно прочитать график" : "Лучше пропустить этот сетап";
+        els.resultTitle.textContent = t("noSignal", "NO SIGNAL");
+        els.resultSub.textContent = result.invalid_chart ? t("invalidChart", "The chart could not be read reliably") : t("skipSetup", "Better to skip this setup");
       }
+
       els.confidenceText.textContent = String(result.confidence) + "%";
-      requestAnimationFrame(() => { els.confidenceBar.style.width = String(result.confidence) + "%"; });
-      els.trendText.textContent = result.trend;
-      els.paramsText.textContent = meta.timeframe + " · " + meta.expiration_minutes + " мин";
-      els.reasonText.textContent = result.reason;
+      els.confidenceBar.style.width = "0%";
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        els.confidenceBar.style.width = String(result.confidence) + "%";
+      }));
+
+      els.trendText.textContent = result.trend || "—";
+      els.paramsText.textContent = meta.timeframe + " · " + meta.expiration_minutes + " " + t("minShort", "min");
+      els.reasonText.textContent = result.reason || "—";
     }
 
     function showScreen(id) {
@@ -179,21 +241,31 @@
 
     function haptic(type) {
       try {
-        if (!tg || !tg.HapticFeedback) return;
-        if (type === "selection" && typeof tg.HapticFeedback.selectionChanged === "function") tg.HapticFeedback.selectionChanged();
-        else if (["success", "warning", "error"].includes(type) && typeof tg.HapticFeedback.notificationOccurred === "function") tg.HapticFeedback.notificationOccurred(type);
-        else if (typeof tg.HapticFeedback.impactOccurred === "function") tg.HapticFeedback.impactOccurred("light");
+        if (tg && tg.HapticFeedback) {
+          if (type === "selection" && typeof tg.HapticFeedback.selectionChanged === "function") {
+            tg.HapticFeedback.selectionChanged();
+          } else if (["success", "warning", "error"].includes(type) && typeof tg.HapticFeedback.notificationOccurred === "function") {
+            tg.HapticFeedback.notificationOccurred(type);
+          } else if (typeof tg.HapticFeedback.impactOccurred === "function") {
+            tg.HapticFeedback.impactOccurred("light");
+          }
+          return;
+        }
+        if (navigator.vibrate) {
+          navigator.vibrate(type === "success" ? 14 : type === "error" ? [18, 30, 18] : 7);
+        }
       } catch (e) {}
     }
 
-    function readableApiError(error, reason) {
+    function readableApiError(error, reason, serverMessage) {
       if (error === "telegram_auth_failed") {
-        if (reason === "expired_init_data") return "Сессия Telegram устарела. Закройте и заново откройте Mini App.";
-        return "Для анализа откройте приложение внутри Telegram.";
+        if (reason === "expired_init_data") return t("sessionExpired", "Telegram session expired. Close and reopen the Mini App.");
+        return t("telegramRequired", "Open the app inside Telegram to analyze.");
       }
-      if (error === "image_too_large") return "Изображение слишком большое.";
-      if (error === "openai_error") return "Модель временно не ответила. Попробуйте ещё раз.";
-      return "Не удалось выполнить анализ.";
+      if (error === "image_too_large") return t("imageTooLarge", "The image is too large.");
+      if (error === "openai_error") return t("modelUnavailable", "The model did not respond. Try again.");
+      if (error === "missing_openai_api_key") return t("genericError", "Analysis failed.");
+      return serverMessage || t("genericError", "Analysis failed.");
     }
 
     function compressImage(file, maxSide, quality) {
@@ -218,6 +290,10 @@
         img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("bad_image")); };
         img.src = url;
       });
+    }
+
+    function delay(ms) {
+      return new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
     }
   }
 

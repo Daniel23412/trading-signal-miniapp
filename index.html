@@ -1,10 +1,110 @@
 <!doctype html>
-<html lang="ru" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta id="themeColorMeta" name="theme-color" content="#080b10"><title>AI Trading Signal</title><link rel="stylesheet" href="/styles.css?v=6"><link rel="stylesheet" href="/enhancements.css?v=3"><script src="https://telegram.org/js/telegram-web-app.js"></script></head><body>
-<main class="app-shell"><header class="topbar"><div class="brand"><div class="brand-mark">↗</div><div><div class="brand-title">AI SIGNAL</div><div class="brand-subtitle">анализ графика</div></div></div><div id="tgBadge" class="badge">TG</div></header>
-<section id="screenInput" class="screen active"><div class="hero"><div class="eyebrow"><span></span> AI CHART ANALYSIS</div><h1>Загрузи график.<br><em>Получи направление.</em></h1><p>Система анализирует только то, что видно на скриншоте, и может отказаться от сигнала при слабом сетапе.</p></div>
-<section class="panel upload-panel"><input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp" hidden><label id="uploadBox" class="upload-box" for="fileInput" role="button"><div class="upload-icon">＋</div><div class="upload-title">Загрузить скрин графика</div><div class="upload-note">Нажми, перетащи или вставь изображение</div></label><div id="previewWrap" class="preview-wrap hidden"><img id="preview" alt="Предпросмотр графика"><button id="removeImage" class="image-action" type="button">Удалить</button></div></section>
-<section class="settings-grid"><div class="panel setting-panel"><div class="setting-head"><span>Таймфрейм</span><span class="muted">график</span></div><div class="segmented" data-group="timeframe"><button data-value="M1">M1</button><button class="selected" data-value="M5">M5</button><button data-value="M15">M15</button><button data-value="M30">M30</button><button data-value="H1">H1</button></div></div><div class="panel setting-panel"><div class="setting-head"><span>Время сделки</span><span class="muted">минуты</span></div><div class="segmented" data-group="expiration"><button data-value="1">1</button><button class="selected" data-value="3">3</button><button data-value="5">5</button><button data-value="10">10</button><button data-value="15">15</button></div></div></section>
-<button id="analyzeBtn" class="primary-btn" type="button" disabled><span class="spark">✦</span><span>ПОЛУЧИТЬ СИГНАЛ</span></button><p class="risk-note">AI-анализ не является гарантией результата. При неясном графике бот покажет «Нет сигнала».</p></section>
-<section id="screenLoading" class="screen loading-screen"><div class="scanner-card"><div class="scanner-frame"><img id="loadingPreview" alt="График"><div class="scan-line"></div><div class="scan-grid"></div></div><div class="pulse-orb"><span></span></div><h2>Анализирую график</h2><p id="loadingText">Проверяю структуру цены…</p><div class="progress"><span></span></div></div></section>
-<section id="screenResult" class="screen result-screen"><div id="resultCard" class="result-card neutral"><div class="result-kicker">РЕЗУЛЬТАТ АНАЛИЗА</div><div id="resultIcon" class="result-icon">•</div><div id="resultTitle" class="result-title">НЕТ СИГНАЛА</div><div id="resultSub" class="result-sub">Сетап недостаточно выражен</div><div class="confidence-row"><span>Уверенность анализа</span><strong id="confidenceText">0%</strong></div><div class="confidence-track"><span id="confidenceBar"></span></div><div class="result-info"><div><span>Тренд</span><strong id="trendText">—</strong></div><div><span>Параметры</span><strong id="paramsText">M5 · 3 мин</strong></div></div><div class="reason-box"><span>Почему</span><p id="reasonText">—</p></div></div><button id="newAnalysisBtn" class="primary-btn" type="button">НОВЫЙ АНАЛИЗ</button><p class="risk-note">Не воспринимай показатель уверенности как вероятность выигрыша.</p></section><div id="toast" class="toast"></div></main>
-<script src="/i18n.js?v=1" defer></script><script src="/app.js?v=2" defer></script><script src="/ui-enhancements.js?v=3" defer></script></body></html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta id="themeColorMeta" name="theme-color" content="#080b10">
+  <title>AI Trading Signal</title>
+  <link rel="stylesheet" href="/styles.css?v=6">
+  <link rel="stylesheet" href="/enhancements.css?v=5">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+<main class="app-shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">↗</div>
+      <div>
+        <div class="brand-title">AI SIGNAL</div>
+        <div class="brand-subtitle">анализ графика</div>
+      </div>
+    </div>
+    <div id="tgBadge" class="badge">TG</div>
+  </header>
+
+  <section id="screenInput" class="screen active">
+    <div class="hero">
+      <div class="eyebrow"><span></span> AI CHART ANALYSIS</div>
+      <h1>Загрузи график.<br><em>Получи направление.</em></h1>
+      <p>Система анализирует только то, что видно на скриншоте, и может отказаться от сигнала при слабом сетапе.</p>
+    </div>
+
+    <section class="panel upload-panel">
+      <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+      <label id="uploadBox" class="upload-box" for="fileInput" role="button">
+        <div class="upload-icon">＋</div>
+        <div class="upload-title">Загрузить скрин графика</div>
+        <div class="upload-note">Нажми, перетащи или вставь изображение</div>
+      </label>
+      <div id="previewWrap" class="preview-wrap hidden">
+        <img id="preview" alt="Предпросмотр графика">
+        <button id="removeImage" class="image-action" type="button">Удалить</button>
+      </div>
+    </section>
+
+    <section class="settings-grid">
+      <div class="panel setting-panel">
+        <div class="setting-head"><span>Таймфрейм</span><span class="muted">график</span></div>
+        <div class="segmented" data-group="timeframe">
+          <button data-value="M1">M1</button><button class="selected" data-value="M5">M5</button>
+          <button data-value="M15">M15</button><button data-value="M30">M30</button><button data-value="H1">H1</button>
+        </div>
+      </div>
+      <div class="panel setting-panel">
+        <div class="setting-head"><span>Время сделки</span><span class="muted">минуты</span></div>
+        <div class="segmented" data-group="expiration">
+          <button data-value="1">1</button><button class="selected" data-value="3">3</button>
+          <button data-value="5">5</button><button data-value="10">10</button><button data-value="15">15</button>
+        </div>
+      </div>
+    </section>
+
+    <button id="analyzeBtn" class="primary-btn" type="button" disabled>
+      <span class="spark">✦</span><span>ПОЛУЧИТЬ СИГНАЛ</span>
+    </button>
+    <p class="risk-note">AI-анализ не является гарантией результата. При неясном графике бот покажет «Нет сигнала».</p>
+  </section>
+
+  <section id="screenLoading" class="screen loading-screen">
+    <div class="scanner-card">
+      <div class="smoke smoke-a"></div>
+      <div class="smoke smoke-b"></div>
+      <div class="smoke smoke-c"></div>
+      <div class="scanner-frame">
+        <img id="loadingPreview" alt="График">
+        <div class="scan-line"></div>
+        <div class="scan-grid"></div>
+        <div class="scan-flare"></div>
+      </div>
+      <div class="pulse-orb"><span></span></div>
+      <h2>Анализирую график</h2>
+      <p id="loadingText">Проверяю структуру цены…</p>
+      <div class="progress"><span></span></div>
+    </div>
+  </section>
+
+  <section id="screenResult" class="screen result-screen">
+    <div id="resultCard" class="result-card neutral">
+      <div class="result-kicker">РЕЗУЛЬТАТ АНАЛИЗА</div>
+      <div id="resultIcon" class="result-icon">•</div>
+      <div id="resultTitle" class="result-title">НЕТ СИГНАЛА</div>
+      <div id="resultSub" class="result-sub">Сетап недостаточно выражен</div>
+      <div class="confidence-row"><span>Уверенность анализа</span><strong id="confidenceText">0%</strong></div>
+      <div class="confidence-track"><span id="confidenceBar"></span></div>
+      <div class="result-info">
+        <div><span>Тренд</span><strong id="trendText">—</strong></div>
+        <div><span>Параметры</span><strong id="paramsText">M5 · 3 мин</strong></div>
+      </div>
+      <div class="reason-box"><span>Почему</span><p id="reasonText">—</p></div>
+    </div>
+    <button id="newAnalysisBtn" class="primary-btn" type="button">НОВЫЙ АНАЛИЗ</button>
+    <p class="risk-note">Не воспринимай показатель уверенности как вероятность выигрыша.</p>
+  </section>
+
+  <div id="toast" class="toast"></div>
+</main>
+<script src="/i18n.js?v=1" defer></script>
+<script src="/app.js?v=4" defer></script>
+<script src="/ui-enhancements.js?v=5" defer></script>
+</body>
+</html>
