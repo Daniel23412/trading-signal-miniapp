@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="AI Signal logo">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#10151c"/><stop offset="1" stop-color="#05070a"/></linearGradient>
+    <linearGradient id="lime" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#8df20b"/><stop offset=".55" stop-color="#b7ff36"/><stop offset="1" stop-color="#e2ff83"/></linearGradient>
+    <linearGradient id="white" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#dfe6ef"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect x="4" y="4" width="152" height="152" rx="34" fill="url(#bg)" stroke="#24303d" stroke-width="2"/>
+  <path d="M39 104 A51 51 0 0 1 118 52" fill="none" stroke="#aaff25" stroke-width="6" stroke-linecap="round" opacity=".9"/>
+  <path d="M45 119 A51 51 0 0 0 121 101" fill="none" stroke="#74cf12" stroke-width="6" stroke-linecap="round" opacity=".8"/>
+  <path d="M48 112 62 98 62 84 76 71 76 98Z" fill="url(#white)" opacity=".96"/>
+  <path d="M69 104 83 90 83 66 97 53 97 86Z" fill="url(#white)" opacity=".96"/>
+  <path d="M89 92 103 78 103 49 117 36 117 72Z" fill="url(#white)" opacity=".96"/>
+  <path d="M44 117 91 70 82 61 126 39 104 84 96 76 61 111 76 126 65 129Z" fill="url(#lime)" filter="url(#glow)"/>
+</svg>
