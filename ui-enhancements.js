@@ -1,0 +1,114 @@
+(() => {
+  "use strict";
+  const LANGS = [
+    ["ru","ru","Русский"],["us","en","English"],["gb","en","English"],["ca","en","English"],["au","en","English"],
+    ["de","de","Deutsch"],["fr","fr","Français"],["it","it","Italiano"],["es","es","Español"],["mx","es","Español"],["ar","es","Español"],
+    ["br","pt","Português"],["jp","ja","日本語"],["in","hi","हिन्दी"],["id","id","Bahasa Indonesia"],["kr","ko","한국어"],
+    ["tr","tr","Türkçe"],["ua","uk","Українська"],["se","sv","Svenska"],["no","no","Norsk"],["cn","zh","中文"]
+  ];
+  const I18N = window.AI_I18N || {};
+  const q = (s) => document.querySelector(s);
+  const qa = (s) => [...document.querySelectorAll(s)];
+  let tg = null;
+  try { tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null; } catch {}
+
+  function norm(v){ const b=String(v||"").toLowerCase().replace("_","-").split("-")[0]; return I18N[b]?b:(b==="ua"?"uk":b==="cn"?"zh":"en"); }
+  function flag(c){ return String(c||"").toUpperCase().replace(/[A-Z]/g,x=>String.fromCodePoint(127397+x.charCodeAt(0))); }
+  function get(k){ const l=norm(localStorage.getItem("ai_signal_locale") || (tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.language_code) || navigator.language || "ru"); return (I18N[l]&&I18N[l][k]) || (I18N.en&&I18N.en[k]) || k; }
+  function currentLocale(){ return norm(localStorage.getItem("ai_signal_locale") || "ru"); }
+
+  const originalFetch = window.fetch && window.fetch.bind(window);
+  if (originalFetch) {
+    window.fetch = (input, init={}) => {
+      try {
+        const url = typeof input === "string" ? input : input && input.url;
+        if (url && url.includes("/api/analyze") && init && typeof init.body === "string") {
+          const body = JSON.parse(init.body); body.locale = currentLocale(); init = { ...init, body: JSON.stringify(body) };
+        }
+      } catch {}
+      return originalFetch(input, init);
+    };
+  }
+
+  function haptic(){
+    try {
+      if (tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred) tg.HapticFeedback.impactOccurred("light");
+      else if (navigator.vibrate) navigator.vibrate(7);
+    } catch {}
+  }
+
+  function setTheme(theme, save=true){
+    const t = theme === "light" ? "light" : "dark";
+    document.documentElement.dataset.theme=t;
+    const icon=q("#themeIcon"); if(icon) icon.textContent=t==="dark"?"☾":"☀";
+    const color=t==="dark"?"#080b10":"#f3f6f9";
+    const meta=q('#themeColorMeta'); if(meta) meta.setAttribute("content",color);
+    try { if(tg&&tg.setHeaderColor) tg.setHeaderColor(color); if(tg&&tg.setBackgroundColor) tg.setBackgroundColor(color); } catch {}
+    if(save) localStorage.setItem("ai_signal_theme",t);
+  }
+
+  function translate(){
+    const t = get;
+    const map = [
+      [".brand-subtitle","brandSubtitle"],[".eyebrow","eyebrow"],[".hero h1","hero"],[".hero p","heroText"],[".upload-title","uploadTitle"],[".upload-note","uploadNote"],
+      ["#removeImage","remove"],[".setting-panel:nth-child(1) .setting-head span:first-child","timeframe"],[".setting-panel:nth-child(1) .muted","chart"],
+      [".setting-panel:nth-child(2) .setting-head span:first-child","expiration"],[".setting-panel:nth-child(2) .muted","minutes"],["#analyzeBtn span:last-child","analyze"],
+      ["#screenInput .risk-note","riskInput"],[".scanner-card h2","loadingTitle"],[".result-kicker","resultKicker"],[".confidence-row span","confidence"],
+      [".result-info>div:first-child span","trend"],[".result-info>div:nth-child(2) span","params"],[".reason-box span","why"],["#newAnalysisBtn","newAnalysis"],["#screenResult .risk-note","riskResult"]
+    ];
+    map.forEach(([s,k])=>{ const n=q(s); if(n&&k!=="hero") n.textContent=t(k); });
+    const h=q('.hero h1'); if(h) h.innerHTML=`${t('heroTitle1')}<br><em>${t('heroTitle2')}</em>`;
+    document.documentElement.lang=currentLocale();
+    translateDynamic();
+  }
+
+  function translateDynamic(){
+    const title=q('#resultTitle'), sub=q('#resultSub'), loading=q('#loadingText'), params=q('#paramsText');
+    if(title){
+      const v=title.textContent.trim();
+      if(["ВВЕРХ","UP","AUFWÄRTS","HAUSSE","SU","ARRIBA","PARA CIMA","上","ऊपर","NAIK","상승","YUKARI","ВГОРУ","UPP","OPP","上涨"].includes(v)) title.textContent=get('up');
+      else if(["ВНИЗ","DOWN","ABWÄRTS","BAISSE","GIÙ","ABAJO","PARA BAIXO","下","नीचे","TURUN","하락","AŞAĞI","NED","下跌"].includes(v)) title.textContent=get('down');
+      else if(v) title.textContent=get('noSignal');
+    }
+    if(sub){ const c=q('#resultCard'); sub.textContent=c&&c.classList.contains('neutral')?get('skipSetup'):get('directionShown'); }
+    if(loading && q('#screenLoading.active')) { const m=get('loadingMessages'); if(Array.isArray(m)&&m.length&&!m.includes(loading.textContent)) loading.textContent=m[0]; }
+    if(params && params.textContent.includes('мин')) params.textContent=params.textContent.replace(/мин/g,get('minShort'));
+    applyArrow();
+  }
+
+  function applyArrow(){
+    const card=q('#resultCard'), icon=q('#resultIcon'); if(!card||!icon) return;
+    if(card.classList.contains('up')) { icon.textContent=''; icon.classList.add('asset-arrow','arrow-up'); }
+    else if(card.classList.contains('down')) { icon.textContent=''; icon.classList.add('asset-arrow','arrow-down'); }
+    else { icon.classList.remove('asset-arrow','arrow-up','arrow-down'); if(!icon.textContent.trim()) icon.textContent='•'; }
+  }
+
+  function buildHeader(){
+    const badge=q('#tgBadge'); if(!badge) return;
+    badge.innerHTML=''; badge.className='topbar-actions';
+    const theme=document.createElement('button'); theme.id='themeToggle'; theme.className='icon-btn'; theme.type='button'; theme.innerHTML='<span id="themeIcon">☾</span>'; theme.onclick=()=>{setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');haptic();};
+    const wrap=document.createElement('div'); wrap.className='lang-picker';
+    const toggle=document.createElement('button'); toggle.className='lang-toggle'; toggle.type='button'; toggle.innerHTML='<span class="flag-emoji"></span><span class="lang-code"></span><span class="chevron">⌄</span>';
+    const menu=document.createElement('div'); menu.className='lang-menu hidden';
+    const savedCountry=localStorage.getItem('ai_signal_country')||representative(currentLocale());
+    function paint(){ toggle.querySelector('.flag-emoji').textContent=flag(savedCountryNow()); toggle.querySelector('.lang-code').textContent=savedCountryNow().toUpperCase(); }
+    function savedCountryNow(){ return localStorage.getItem('ai_signal_country')||representative(currentLocale()); }
+    LANGS.forEach(([country,locale,label])=>{ const b=document.createElement('button'); b.className='lang-option'; b.type='button'; b.innerHTML=`<span class="flag-emoji">${flag(country)}</span><b>${country.toUpperCase()}</b><small>${label}</small>`; b.onclick=()=>{localStorage.setItem('ai_signal_locale',locale);localStorage.setItem('ai_signal_country',country);paint();translate();menu.classList.add('hidden');haptic();}; menu.appendChild(b); });
+    toggle.onclick=(e)=>{e.stopPropagation();menu.classList.toggle('hidden');haptic();}; document.addEventListener('click',()=>menu.classList.add('hidden'));
+    wrap.append(toggle,menu); badge.append(theme,wrap); paint();
+  }
+
+  function representative(l){ return ({ru:'ru',en:'us',de:'de',fr:'fr',it:'it',es:'es',pt:'br',ja:'jp',hi:'in',id:'id',ko:'kr',tr:'tr',uk:'ua',sv:'se',no:'no',zh:'cn'})[l]||'us'; }
+
+  function enhanceBrand(){ const m=q('.brand-mark'); if(m){ const img=document.createElement('img'); img.className='brand-logo'; img.src='/logo.svg'; img.alt='AI SIGNAL'; m.replaceWith(img); } }
+
+  function init(){
+    enhanceBrand(); buildHeader();
+    const savedTheme=localStorage.getItem('ai_signal_theme') || (tg&&tg.colorScheme) || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'); setTheme(savedTheme,false);
+    translate();
+    const input=q('#fileInput'); if(input) input.addEventListener('change',()=>haptic());
+    const analyze=q('#analyzeBtn'); if(analyze) analyze.addEventListener('click',()=>haptic());
+    const observer=new MutationObserver(()=>translateDynamic()); observer.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class'],childList:true,characterData:true});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true}); else init();
+})();
