@@ -80,7 +80,7 @@
 
     const contentTop = Number(tg.contentSafeAreaInset && tg.contentSafeAreaInset.top) || 0;
     const safeTop = Number(tg.safeAreaInset && tg.safeAreaInset.top) || 0;
-    const fallbackTop = platform === "ios" ? 86 : platform === "android" ? 66 : 0;
+    const fallbackTop = platform === "ios" ? 104 : platform === "android" ? 72 : 64;
     const top = Math.max(contentTop, safeTop, fallbackTop);
     root.style.setProperty("--tg-app-content-top", `${Math.round(top)}px`);
     if (shell) shell.style.paddingTop = `${Math.round(top + 14)}px`;
@@ -256,8 +256,9 @@
         tg.onEvent("viewportChanged", syncTelegramSafeArea);
       } catch {}
     }
-    setTimeout(syncTelegramSafeArea, 150);
-    setTimeout(syncTelegramSafeArea, 700);
+    setTimeout(syncTelegramSafeArea, 120);
+    setTimeout(syncTelegramSafeArea, 500);
+    setTimeout(syncTelegramSafeArea, 1200);
 
     const resultCard = q("#resultCard");
     if (resultCard) {
