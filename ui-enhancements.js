@@ -1,22 +1,232 @@
-(()=>{"use strict";
-const css=document.createElement('link');css.rel='stylesheet';css.href='/enhancements.css?v=3';document.head.appendChild(css);
-const LANGS=[["ru","ru","Русский"],["us","en","English"],["gb","en","English"],["ca","en","English"],["au","en","English"],["de","de","Deutsch"],["fr","fr","Français"],["it","it","Italiano"],["es","es","Español"],["mx","es","Español"],["ar","es","Español"],["br","pt","Português"],["jp","ja","日本語"],["in","hi","हिन्दी"],["id","id","Bahasa Indonesia"],["kr","ko","한국어"],["tr","tr","Türkçe"],["ua","uk","Українська"],["se","sv","Svenska"],["no","no","Norsk"],["cn","zh","中文"]];
-const I18N=window.AI_I18N||{},q=s=>document.querySelector(s);let tg=null;try{tg=window.Telegram&&window.Telegram.WebApp?window.Telegram.WebApp:null}catch{}
-function norm(v){const b=String(v||'').toLowerCase().replace('_','-').split('-')[0];return I18N[b]?b:(b==='ua'?'uk':b==='cn'?'zh':'en')}
-function locale(){return norm(localStorage.getItem('ai_signal_locale')||(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user&&tg.initDataUnsafe.user.language_code)||navigator.language||'ru')}
-function tr(k){const l=locale();return(I18N[l]&&I18N[l][k])||(I18N.en&&I18N.en[k])||k}
-function country(){return localStorage.getItem('ai_signal_country')||({ru:'ru',en:'us',de:'de',fr:'fr',it:'it',es:'es',pt:'br',ja:'jp',hi:'in',id:'id',ko:'kr',tr:'tr',uk:'ua',sv:'se',no:'no',zh:'cn'})[locale()]||'us'}
-function flagUrl(c){return`https://flagcdn.com/w40/${c}.png`}
-function text(el,v){if(el&&el.textContent!==v)el.textContent=v}
-function haptic(type='light'){try{if(tg&&tg.HapticFeedback){if(type==='selection'&&tg.HapticFeedback.selectionChanged)tg.HapticFeedback.selectionChanged();else if(tg.HapticFeedback.impactOccurred)tg.HapticFeedback.impactOccurred('light')}else if(navigator.vibrate)navigator.vibrate(8)}catch{}}
-function setTheme(v,save=true){const t=v==='light'?'light':'dark';document.documentElement.dataset.theme=t;text(q('#themeIcon'),t==='dark'?'☾':'☀');const color=t==='dark'?'#080b10':'#f3f6f9';const m=q('#themeColorMeta');if(m)m.content=color;try{if(tg&&tg.setHeaderColor)tg.setHeaderColor(color);if(tg&&tg.setBackgroundColor)tg.setBackgroundColor(color)}catch{}if(save)localStorage.setItem('ai_signal_theme',t)}
-function translateStatic(){const map=[[".brand-subtitle","brandSubtitle"],[".eyebrow","eyebrow"],[".hero p","heroText"],[".upload-title","uploadTitle"],[".upload-note","uploadNote"],["#removeImage","remove"],[".setting-panel:nth-child(1) .setting-head span:first-child","timeframe"],[".setting-panel:nth-child(1) .muted","chart"],[".setting-panel:nth-child(2) .setting-head span:first-child","expiration"],[".setting-panel:nth-child(2) .muted","minutes"],["#analyzeBtn span:last-child","analyze"],["#screenInput .risk-note","riskInput"],[".scanner-card h2","loadingTitle"],[".result-kicker","resultKicker"],[".confidence-row span","confidence"],[".result-info>div:first-child span","trend"],[".result-info>div:nth-child(2) span","params"],[".reason-box span","why"],["#newAnalysisBtn","newAnalysis"],["#screenResult .risk-note","riskResult"]];map.forEach(([s,k])=>text(q(s),tr(k)));const h=q('.hero h1');if(h){const html=`${tr('heroTitle1')}<br><em>${tr('heroTitle2')}</em>`;if(h.innerHTML!==html)h.innerHTML=html}document.documentElement.lang=locale();translateDynamic()}
-function translateDynamic(){const card=q('#resultCard'),title=q('#resultTitle'),sub=q('#resultSub'),icon=q('#resultIcon');if(card&&title){if(card.classList.contains('up'))text(title,tr('up'));else if(card.classList.contains('down'))text(title,tr('down'));else text(title,tr('noSignal'))}if(card&&sub)text(sub,card.classList.contains('neutral')?tr('skipSetup'):tr('directionShown'));if(card&&icon){if(card.classList.contains('up')){icon.textContent='';icon.className='result-icon asset-arrow arrow-up'}else if(card.classList.contains('down')){icon.textContent='';icon.className='result-icon asset-arrow arrow-down'}else{icon.className='result-icon';text(icon,'•')}}const p=q('#paramsText');if(p&&/мин/.test(p.textContent))text(p,p.textContent.replace(/мин/g,tr('minShort')))}
-function translateLoading(){const el=q('#loadingText');if(!el||!q('#screenLoading.active'))return;const list=tr('loadingMessages');if(!Array.isArray(list)||!list.length)return;const ru=(I18N.ru&&I18N.ru.loadingMessages)||[];const idx=ru.indexOf(el.textContent);if(idx>=0)text(el,list[idx%list.length])}
-function translateToast(){const el=q('#toast');if(!el)return;const ru={"Поддерживаются JPG, PNG и WEBP.":'supported',"Исходный файл слишком большой.":'sourceTooLarge',"Не удалось достаточно уменьшить изображение.":'compressFailed',"Не удалось прочитать изображение.":'readFailed',"Сначала загрузите скрин графика.":'uploadFirst',"Сервер вернул некорректный ответ.":'serverInvalid',"Сессия Telegram устарела. Закройте и заново откройте Mini App.":'sessionExpired',"Для анализа откройте приложение внутри Telegram.":'telegramRequired',"Изображение слишком большое.":'imageTooLarge',"Модель временно не ответила. Попробуйте ещё раз.":'modelUnavailable',"Не удалось выполнить анализ.":'genericError',"Ошибка анализа. Попробуйте ещё раз.":'retry'};const key=ru[el.textContent];if(key)text(el,tr(key))}
-function buildHeader(){const host=q('#tgBadge');if(!host)return;host.textContent='';host.className='topbar-actions';const theme=document.createElement('button');theme.type='button';theme.className='icon-btn';theme.id='themeToggle';theme.innerHTML='<span id="themeIcon">☾</span>';theme.addEventListener('click',()=>{setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');haptic()});const wrap=document.createElement('div');wrap.className='lang-picker';const toggle=document.createElement('button');toggle.type='button';toggle.className='lang-toggle';toggle.innerHTML='<img class="flag-img" alt=""><span class="lang-code"></span><span class="chevron">⌄</span>';const menu=document.createElement('div');menu.className='lang-menu hidden';const paint=()=>{const c=country(),img=toggle.querySelector('img');img.src=flagUrl(c);img.alt=c.toUpperCase();text(toggle.querySelector('.lang-code'),c.toUpperCase())};LANGS.forEach(([c,l,label])=>{const b=document.createElement('button');b.type='button';b.className='lang-option';b.innerHTML=`<img class="flag-img" src="${flagUrl(c)}" alt="${c.toUpperCase()}"><b>${c.toUpperCase()}</b><small>${label}</small>`;b.addEventListener('click',e=>{e.stopPropagation();localStorage.setItem('ai_signal_locale',l);localStorage.setItem('ai_signal_country',c);paint();translateStatic();menu.classList.add('hidden');haptic('selection')});menu.appendChild(b)});toggle.addEventListener('click',e=>{e.stopPropagation();menu.classList.toggle('hidden');haptic()});document.addEventListener('click',()=>menu.classList.add('hidden'));wrap.append(toggle,menu);host.append(theme,wrap);paint()}
-function enhanceBrand(){const m=q('.brand-mark');if(m){const img=document.createElement('img');img.className='brand-logo';img.src='/logo.svg';img.alt='AI SIGNAL';m.replaceWith(img)}}
-const originalFetch=window.fetch&&window.fetch.bind(window);if(originalFetch)window.fetch=(input,init={})=>{try{const url=typeof input==='string'?input:input&&input.url;if(url&&url.includes('/api/analyze')&&typeof init.body==='string'){const body=JSON.parse(init.body);body.locale=locale();init={...init,body:JSON.stringify(body)}}}catch{}return originalFetch(input,init)};
-function init(){enhanceBrand();buildHeader();setTheme(localStorage.getItem('ai_signal_theme')||(tg&&tg.colorScheme)||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'),false);translateStatic();q('#fileInput')?.addEventListener('change',()=>haptic());q('#analyzeBtn')?.addEventListener('click',()=>haptic());const rc=q('#resultCard');if(rc)new MutationObserver(()=>translateDynamic()).observe(rc,{attributes:true,attributeFilter:['class']});const loading=q('#loadingText');if(loading)new MutationObserver(()=>translateLoading()).observe(loading,{childList:true,characterData:true,subtree:true});const toast=q('#toast');if(toast)new MutationObserver(()=>translateToast()).observe(toast,{childList:true,characterData:true,subtree:true})}
-setTimeout(init,0);
+(() => {
+  "use strict";
+
+  const LANGS = [
+    ["ru","ru","Русский"],["us","en","English"],["gb","en","English"],["ca","en","English"],["au","en","English"],
+    ["de","de","Deutsch"],["fr","fr","Français"],["it","it","Italiano"],["es","es","Español"],["mx","es","Español"],["ar","es","Español"],
+    ["br","pt","Português"],["jp","ja","日本語"],["in","hi","हिन्दी"],["id","id","Bahasa Indonesia"],["kr","ko","한국어"],
+    ["tr","tr","Türkçe"],["ua","uk","Українська"],["se","sv","Svenska"],["no","no","Norsk"],["cn","zh","中文"]
+  ];
+
+  const I18N = window.AI_I18N || {};
+  const q = (s) => document.querySelector(s);
+  let tg = null;
+  try { tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null; } catch {}
+
+  function normalizeLocale(value) {
+    const raw = String(value || "").toLowerCase().replace("_","-").split("-")[0];
+    if (I18N[raw]) return raw;
+    if (raw === "ua") return "uk";
+    if (raw === "cn") return "zh";
+    return "ru";
+  }
+
+  function locale() {
+    const stored = localStorage.getItem("ai_signal_locale");
+    const telegram = tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.language_code;
+    return normalizeLocale(stored || telegram || navigator.language || "ru");
+  }
+
+  function tr(key) {
+    const l = locale();
+    return (I18N[l] && I18N[l][key]) ?? (I18N.en && I18N.en[key]) ?? key;
+  }
+
+  function representativeCountry(l) {
+    return ({ru:"ru",en:"us",de:"de",fr:"fr",it:"it",es:"es",pt:"br",ja:"jp",hi:"in",id:"id",ko:"kr",tr:"tr",uk:"ua",sv:"se",no:"no",zh:"cn"})[l] || "us";
+  }
+
+  function currentCountry() {
+    return localStorage.getItem("ai_signal_country") || representativeCountry(locale());
+  }
+
+  function flagUrl(country) {
+    return `https://flagcdn.com/w80/${country}.png`;
+  }
+
+  function setText(node, value) {
+    if (node && node.textContent !== String(value)) node.textContent = value;
+  }
+
+  function haptic(type = "light") {
+    try {
+      if (tg && tg.HapticFeedback) {
+        if (type === "selection" && tg.HapticFeedback.selectionChanged) tg.HapticFeedback.selectionChanged();
+        else if (tg.HapticFeedback.impactOccurred) tg.HapticFeedback.impactOccurred("light");
+      } else if (navigator.vibrate) navigator.vibrate(7);
+    } catch {}
+  }
+
+  function setTheme(value, save = true) {
+    const theme = value === "light" ? "light" : "dark";
+    document.documentElement.dataset.theme = theme;
+    const switcher = q("#themeToggle");
+    if (switcher) {
+      switcher.dataset.mode = theme;
+      switcher.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+      switcher.setAttribute("aria-label", tr("theme"));
+    }
+
+    const color = theme === "dark" ? "#080b10" : "#f3f6f9";
+    const meta = q("#themeColorMeta");
+    if (meta) meta.setAttribute("content", color);
+
+    try {
+      if (tg && tg.setHeaderColor) tg.setHeaderColor(color);
+      if (tg && tg.setBackgroundColor) tg.setBackgroundColor(color);
+    } catch {}
+
+    if (save) localStorage.setItem("ai_signal_theme", theme);
+  }
+
+  function translateStatic() {
+    const map = [
+      [".brand-subtitle","brandSubtitle"],[".eyebrow","eyebrow"],[".hero p","heroText"],
+      [".upload-title","uploadTitle"],[".upload-note","uploadNote"],["#removeImage","remove"],
+      [".setting-panel:nth-child(1) .setting-head span:first-child","timeframe"],
+      [".setting-panel:nth-child(1) .muted","chart"],
+      [".setting-panel:nth-child(2) .setting-head span:first-child","expiration"],
+      [".setting-panel:nth-child(2) .muted","minutes"],
+      ["#analyzeBtn span:last-child","analyze"],["#screenInput .risk-note","riskInput"],
+      [".scanner-card h2","loadingTitle"],[".result-kicker","resultKicker"],
+      [".confidence-row span","confidence"],[".result-info>div:first-child span","trend"],
+      [".result-info>div:nth-child(2) span","params"],[".reason-box span","why"],
+      ["#newAnalysisBtn","newAnalysis"],["#screenResult .risk-note","riskResult"]
+    ];
+
+    map.forEach(([selector,key]) => setText(q(selector), tr(key)));
+
+    const h1 = q(".hero h1");
+    if (h1) h1.innerHTML = `${tr("heroTitle1")}<br><em>${tr("heroTitle2")}</em>`;
+    document.documentElement.lang = locale();
+
+    const switcher = q("#themeToggle");
+    if (switcher) switcher.setAttribute("aria-label", tr("theme"));
+
+    translateResultChrome();
+  }
+
+  function translateResultChrome() {
+    const card = q("#resultCard");
+    if (!card) return;
+    const title = q("#resultTitle");
+    const sub = q("#resultSub");
+    if (card.classList.contains("up")) {
+      setText(title, tr("up"));
+      setText(sub, tr("directionShown"));
+    } else if (card.classList.contains("down")) {
+      setText(title, tr("down"));
+      setText(sub, tr("directionShown"));
+    } else {
+      setText(title, tr("noSignal"));
+    }
+  }
+
+  function enhanceBrand() {
+    const mark = q(".brand-mark");
+    if (!mark) return;
+    const img = document.createElement("img");
+    img.className = "brand-logo";
+    img.src = "/logo-v2.png?v=2";
+    img.alt = "AI SIGNAL";
+    mark.replaceWith(img);
+  }
+
+  function buildHeader() {
+    const host = q("#tgBadge");
+    if (!host) return;
+    host.textContent = "";
+    host.className = "topbar-actions";
+
+    const theme = document.createElement("button");
+    theme.id = "themeToggle";
+    theme.className = "theme-switch";
+    theme.type = "button";
+    theme.innerHTML = `
+      <span class="theme-icon theme-sun" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.3"></circle><path d="M12 2.1v2.2M12 19.7v2.2M4.99 4.99l1.55 1.55M17.46 17.46l1.55 1.55M2.1 12h2.2M19.7 12h2.2M4.99 19.01l1.55-1.55M17.46 6.54l1.55-1.55"></path></svg>
+      </span>
+      <span class="theme-icon theme-moon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M20.1 15.3A8.4 8.4 0 0 1 8.7 3.9 8.6 8.6 0 1 0 20.1 15.3Z"></path></svg>
+      </span>
+      <span class="theme-knob" aria-hidden="true"></span>
+    `;
+    theme.addEventListener("click", () => {
+      const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      setTheme(next);
+      haptic();
+    });
+
+    const wrap = document.createElement("div");
+    wrap.className = "lang-picker";
+
+    const toggle = document.createElement("button");
+    toggle.className = "lang-toggle";
+    toggle.type = "button";
+    toggle.setAttribute("aria-haspopup", "menu");
+    toggle.innerHTML = `<img class="flag-img" alt=""><span class="lang-code"></span><span class="chevron">⌄</span>`;
+
+    const menu = document.createElement("div");
+    menu.className = "lang-menu hidden";
+    menu.setAttribute("role", "menu");
+
+    function paint() {
+      const c = currentCountry();
+      const img = toggle.querySelector(".flag-img");
+      if (img) {
+        img.src = flagUrl(c);
+        img.alt = c.toUpperCase();
+      }
+      setText(toggle.querySelector(".lang-code"), c.toUpperCase());
+    }
+
+    LANGS.forEach(([country, language, label]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "lang-option";
+      button.setAttribute("role", "menuitem");
+      button.innerHTML = `<img class="flag-img" src="${flagUrl(country)}" alt="${country.toUpperCase()}"><b>${country.toUpperCase()}</b><small>${label}</small>`;
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        localStorage.setItem("ai_signal_locale", language);
+        localStorage.setItem("ai_signal_country", country);
+        paint();
+        translateStatic();
+        menu.classList.add("hidden");
+        haptic("selection");
+      });
+      menu.appendChild(button);
+    });
+
+    toggle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      menu.classList.toggle("hidden");
+      haptic();
+    });
+
+    document.addEventListener("click", () => menu.classList.add("hidden"));
+    menu.addEventListener("click", (event) => event.stopPropagation());
+
+    wrap.append(toggle, menu);
+    host.append(theme, wrap);
+    paint();
+  }
+
+  function init() {
+    enhanceBrand();
+    buildHeader();
+    const initialTheme = localStorage.getItem("ai_signal_theme") || (tg && tg.colorScheme) || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    setTheme(initialTheme, false);
+    translateStatic();
+
+    const resultCard = q("#resultCard");
+    if (resultCard) {
+      new MutationObserver(() => translateResultChrome()).observe(resultCard, { attributes: true, attributeFilter: ["class"] });
+    }
+  }
+
+  window.AISignalUI = { locale, tr, haptic, setTheme, translateStatic, translateResultChrome };
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
+  else init();
 })();
