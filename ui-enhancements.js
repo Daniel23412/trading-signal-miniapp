@@ -59,9 +59,11 @@
 
   function syncTelegramSafeArea() {
     const root = document.documentElement;
+    const shell = q(".app-shell");
     if (!tg) {
       root.dataset.telegram = "0";
       root.style.setProperty("--tg-app-content-top", "0px");
+      if (shell) shell.style.paddingTop = "";
       return;
     }
 
@@ -72,14 +74,16 @@
 
     if (!isTelegram) {
       root.style.setProperty("--tg-app-content-top", "0px");
+      if (shell) shell.style.paddingTop = "";
       return;
     }
 
     const contentTop = Number(tg.contentSafeAreaInset && tg.contentSafeAreaInset.top) || 0;
     const safeTop = Number(tg.safeAreaInset && tg.safeAreaInset.top) || 0;
-    const fallbackTop = platform === "ios" ? 78 : platform === "android" ? 64 : 0;
+    const fallbackTop = platform === "ios" ? 86 : platform === "android" ? 66 : 0;
     const top = Math.max(contentTop, safeTop, fallbackTop);
     root.style.setProperty("--tg-app-content-top", `${Math.round(top)}px`);
+    if (shell) shell.style.paddingTop = `${Math.round(top + 14)}px`;
   }
 
   function setTheme(value, save = true) {
