@@ -21,6 +21,128 @@
       .app-shell{padding-top:118px!important}
       .topbar{margin-bottom:24px}
     }
+
+    .access-screen{padding-top:8px}
+    .access-card{
+      position:relative;
+      overflow:hidden;
+      border:1px solid var(--border);
+      border-radius:28px;
+      padding:26px 20px 20px;
+      background:linear-gradient(180deg,rgba(18,24,33,.97),rgba(11,15,21,.97));
+      box-shadow:var(--shadow);
+    }
+    .access-card::before{
+      content:"";
+      position:absolute;
+      width:320px;height:320px;
+      left:50%;top:-235px;
+      transform:translateX(-50%);
+      border-radius:50%;
+      filter:blur(24px);
+      background:var(--accent);
+      opacity:.16;
+      pointer-events:none;
+    }
+    html[data-theme="light"] .access-card{
+      background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(245,248,251,.98));
+    }
+    .access-kicker{
+      position:relative;
+      z-index:1;
+      color:var(--accent);
+      font-size:10px;
+      font-weight:950;
+      letter-spacing:.16em;
+    }
+    .access-card h1{
+      position:relative;
+      z-index:1;
+      margin:14px 0 10px;
+      font-size:clamp(30px,8vw,46px);
+      line-height:1;
+      letter-spacing:-.045em;
+    }
+    .access-card>p{
+      position:relative;
+      z-index:1;
+      margin:0;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.55;
+    }
+    .access-steps{
+      position:relative;
+      z-index:1;
+      display:grid;
+      gap:9px;
+      margin:22px 0 16px;
+    }
+    .access-step{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:13px;
+      border:1px solid rgba(255,255,255,.07);
+      border-radius:16px;
+      background:rgba(255,255,255,.025);
+    }
+    html[data-theme="light"] .access-step{
+      border-color:rgba(17,24,39,.08);
+      background:rgba(17,24,39,.025);
+    }
+    .access-step-dot{
+      width:38px;height:38px;flex:0 0 38px;
+      border-radius:12px;
+      display:grid;place-items:center;
+      border:1px solid rgba(255,255,255,.09);
+      background:rgba(255,255,255,.035);
+      color:var(--muted);
+      font-weight:950;
+      transition:.25s ease;
+    }
+    .access-step.done .access-step-dot{
+      color:#071006;
+      border-color:var(--accent);
+      background:var(--accent);
+      box-shadow:0 0 24px rgba(183,255,54,.16);
+    }
+    .access-step strong{
+      display:block;
+      font-size:13px;
+      color:var(--text);
+    }
+    .access-step small{
+      display:block;
+      margin-top:4px;
+      font-size:10px;
+      color:var(--muted);
+    }
+    .access-actions{
+      position:relative;
+      z-index:1;
+      display:grid;
+      gap:9px;
+    }
+    .access-actions .primary-btn{margin-top:0}
+    .secondary-btn{
+      width:100%;
+      min-height:50px;
+      border:1px solid var(--border);
+      border-radius:16px;
+      background:rgba(255,255,255,.035);
+      color:var(--text);
+      font-weight:900;
+      font-size:12px;
+      letter-spacing:.04em;
+      cursor:pointer;
+    }
+    .secondary-btn:disabled,.primary-btn:disabled{cursor:not-allowed}
+    .access-hint{
+      margin-top:14px!important;
+      text-align:center;
+      font-size:10px!important;
+    }
   </style>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
@@ -37,7 +159,40 @@
     <div id="tgBadge" class="badge">TG</div>
   </header>
 
-  <section id="screenInput" class="screen active">
+  <section id="screenAccess" class="screen access-screen active">
+    <div class="access-card">
+      <div class="access-kicker">AI SIGNAL ACCESS</div>
+      <h1 id="accessTitle">Открываем доступ</h1>
+      <p id="accessDesc">Для использования сигналов нужна регистрация и первый депозит от $5.</p>
+
+      <div class="access-steps">
+        <div id="accessRegStep" class="access-step">
+          <div class="access-step-dot">1</div>
+          <div>
+            <strong id="accessRegTitle">Регистрация</strong>
+            <small id="accessRegStatus">Ожидает подтверждения</small>
+          </div>
+        </div>
+        <div id="accessDepStep" class="access-step">
+          <div class="access-step-dot">2</div>
+          <div>
+            <strong id="accessDepTitle">Первый депозит от $5</strong>
+            <small id="accessDepStatus">Ожидает подтверждения</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="access-actions">
+        <button id="registerBtn" class="primary-btn" type="button">
+          <span class="spark">✦</span><span id="registerBtnText">ЗАРЕГИСТРИРОВАТЬСЯ</span>
+        </button>
+        <button id="checkAccessBtn" class="secondary-btn" type="button">ПРОВЕРИТЬ ДОСТУП</button>
+      </div>
+      <p id="accessHint" class="access-hint">После регистрации и депозита вернись в бот — проверка обновится автоматически.</p>
+    </div>
+  </section>
+
+  <section id="screenInput" class="screen">
     <div class="hero">
       <div class="eyebrow"><span></span> AI CHART ANALYSIS</div>
       <h1>Загрузи график.<br><em>Получи направление.</em></h1>
@@ -119,7 +274,7 @@
   <div id="toast" class="toast"></div>
 </main>
 <script src="/i18n.js?v=1" defer></script>
-<script src="/app.js?v=4" defer></script>
+<script src="/app.js?v=5" defer></script>
 <script src="/ui-enhancements.js?v=9" defer></script>
 </body>
 </html>
