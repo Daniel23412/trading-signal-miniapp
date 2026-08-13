@@ -5,6 +5,25 @@ const ALLOWED_TIMEFRAMES = new Set(["M1", "M5", "M15", "M30", "H1"]);
 const ALLOWED_EXPIRATIONS = new Set(["1", "3", "5", "10", "15"]);
 const MAX_DATA_URL_LENGTH = 3_200_000;
 
+const LANGUAGES = {
+  ru: { name: "Russian", native: "русском" },
+  en: { name: "English", native: "English" },
+  de: { name: "German", native: "Deutsch" },
+  fr: { name: "French", native: "français" },
+  it: { name: "Italian", native: "italiano" },
+  es: { name: "Spanish", native: "español" },
+  pt: { name: "Portuguese", native: "português" },
+  ja: { name: "Japanese", native: "日本語" },
+  hi: { name: "Hindi", native: "हिन्दी" },
+  id: { name: "Indonesian", native: "Bahasa Indonesia" },
+  ko: { name: "Korean", native: "한국어" },
+  tr: { name: "Turkish", native: "Türkçe" },
+  uk: { name: "Ukrainian", native: "українська" },
+  sv: { name: "Swedish", native: "svenska" },
+  no: { name: "Norwegian", native: "norsk" },
+  zh: { name: "Simplified Chinese", native: "简体中文" }
+};
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -21,8 +40,7 @@ export default async function handler(req, res) {
       if (!auth.ok) {
         return res.status(401).json({
           error: "telegram_auth_failed",
-          reason: auth.reason,
-          message: "Откройте приложение внутри Telegram и попробуйте ещё раз."
+          reason: auth.reason
         });
       }
     }
@@ -33,6 +51,8 @@ export default async function handler(req, res) {
     const image = req.body?.image;
     const timeframe = String(req.body?.timeframe || "M5").toUpperCase();
     const expiration = String(req.body?.expiration || "3");
+    const locale = normalizeLocale(req.body?.locale);
+    const language = LANGUAGES[locale];
 
     if (!ALLOWED_TIMEFRAMES.has(timeframe)) {
       return res.status(400).json({ error: "invalid_timeframe" });
@@ -44,7 +64,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "invalid_image" });
     }
     if (image.length > MAX_DATA_URL_LENGTH) {
-      return res.status(413).json({ error: "image_too_large", message: "Изображение слишком большое." });
+      return res.status(413).json({ error: "image_too_large" });
     }
 
     const model = process.env.OPENAI_MODEL || "gpt-5.6-luna";
@@ -64,20 +84,28 @@ export default async function handler(req, res) {
       additionalProperties: false
     };
 
-    const prompt = `Проанализируй только то, что реально видно на приложенном скриншоте торгового графика.
-Параметры пользователя: таймфрейм ${timeframe}, предполагаемая длительность сделки ${expiration} мин.
+    const prompt = `Analyze ONLY what is actually visible in the attached trading-chart screenshot.
 
-Твоя задача — дать краткую оценку направления ближайшего движения только по визуальным данным: структуре цены, последовательности максимумов/минимумов, свечам, локальным уровням и индикаторам, если они действительно видны.
+User parameters:
+- timeframe: ${timeframe}
+- intended trade duration: ${expiration} minutes
+- selected interface language: ${language.native} (${language.name})
 
-Правила:
-- Не выдумывай цену, актив, индикаторы или уровни, которых не видно.
-- Если скриншот не является торговым графиком, нечитаемый, обрезан критически или данных мало — signal=NO_SIGNAL, invalid_chart=true.
-- Если сетап неоднозначный — signal=NO_SIGNAL.
-- confidence — это внутренняя уверенность анализа, НЕ вероятность выигрыша и НЕ гарантия.
-- Для UP/DOWN используй высокий порог: направление должно быть визуально выраженным.
-- reason: максимум 2 коротких предложения на русском языке.
-- trend: коротко: «восходящий», «нисходящий», «боковой» или «неясный».
-- Никаких обещаний прибыли и никаких гарантий.`;
+Task:
+Give a short visual assessment of the nearest price direction using only visible evidence such as price structure, highs/lows, candles, local levels, and indicators if they are genuinely visible.
+
+Rules:
+- Never invent the asset, price, indicators, levels, or market context that are not visible.
+- If the screenshot is not a trading chart, is unreadable, critically cropped, or contains too little information, use signal=NO_SIGNAL and invalid_chart=true.
+- If the setup is ambiguous, use signal=NO_SIGNAL.
+- confidence is internal analysis confidence, NOT a win probability and NOT a guarantee.
+- UP/DOWN requires a clearly expressed visual direction.
+- trend MUST be a short, natural phrase written ONLY in ${language.native}.
+- reason MUST contain no more than 2 short sentences written ONLY in ${language.native}.
+- Do NOT use Russian in trend or reason unless the selected language is Russian.
+- Do NOT mix languages in trend or reason.
+- No promises of profit and no guarantees.
+- signal, chart_quality and JSON property names remain technical English values exactly as required by the schema.`;
 
     const openaiRes = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -89,7 +117,7 @@ export default async function handler(req, res) {
         model,
         store: false,
         reasoning: { effort: "none" },
-        instructions: "Ты анализатор изображения торгового графика. Возвращай только данные по заданной JSON-схеме.",
+        instructions: `You are a visual trading-chart analyzer. Return only data matching the JSON schema. Human-readable fields trend and reason must be written exclusively in ${language.native} (${language.name}).`,
         input: [
           {
             role: "user",
@@ -114,15 +142,12 @@ export default async function handler(req, res) {
     const data = await openaiRes.json();
     if (!openaiRes.ok) {
       console.error("OpenAI error", openaiRes.status, JSON.stringify(data).slice(0, 1600));
-      return res.status(502).json({
-        error: "openai_error",
-        message: data?.error?.message || "Не удалось выполнить анализ."
-      });
+      return res.status(502).json({ error: "openai_error" });
     }
 
     const outputText = getOutputText(data);
     if (!outputText) {
-      return res.status(502).json({ error: "empty_model_output", message: "Модель не вернула результат." });
+      return res.status(502).json({ error: "empty_model_output" });
     }
 
     let parsed;
@@ -136,21 +161,35 @@ export default async function handler(req, res) {
     const result = normalizeSignal(parsed, minConfidence);
     if (result.invalid_chart) result.signal = "NO_SIGNAL";
 
+    // Avoid Russian fallback strings from normalizeSignal if the model ever returns an empty string.
+    if (typeof parsed?.trend !== "string" || !parsed.trend.trim()) result.trend = "—";
+    if (typeof parsed?.reason !== "string" || !parsed.reason.trim()) result.reason = "—";
+
     return res.status(200).json({
       ok: true,
       result,
       meta: {
         timeframe,
         expiration_minutes: Number(expiration),
+        locale,
+        language: language.name,
         model,
         min_confidence: minConfidence,
-        disclaimer: "AI-анализ графика не гарантирует исход сделки."
+        disclaimer: "AI chart analysis does not guarantee the outcome of a trade."
       }
     });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "internal_error", message: "Внутренняя ошибка сервера." });
+    return res.status(500).json({ error: "internal_error" });
   }
+}
+
+function normalizeLocale(value) {
+  const raw = String(value || "ru").toLowerCase().replace("_", "-").split("-")[0];
+  if (LANGUAGES[raw]) return raw;
+  if (raw === "ua") return "uk";
+  if (raw === "cn") return "zh";
+  return "ru";
 }
 
 function getOutputText(response) {
