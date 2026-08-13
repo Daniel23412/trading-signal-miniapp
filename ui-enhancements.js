@@ -57,6 +57,31 @@
     } catch {}
   }
 
+  function syncTelegramSafeArea() {
+    const root = document.documentElement;
+    if (!tg) {
+      root.dataset.telegram = "0";
+      root.style.setProperty("--tg-app-content-top", "0px");
+      return;
+    }
+
+    const platform = String(tg.platform || "").toLowerCase();
+    const isTelegram = Boolean(tg.initData) || ["ios","android","macos","tdesktop","weba","webk"].includes(platform);
+    root.dataset.telegram = isTelegram ? "1" : "0";
+    root.dataset.tgPlatform = platform || "unknown";
+
+    if (!isTelegram) {
+      root.style.setProperty("--tg-app-content-top", "0px");
+      return;
+    }
+
+    const contentTop = Number(tg.contentSafeAreaInset && tg.contentSafeAreaInset.top) || 0;
+    const safeTop = Number(tg.safeAreaInset && tg.safeAreaInset.top) || 0;
+    const fallbackTop = platform === "ios" ? 78 : platform === "android" ? 64 : 0;
+    const top = Math.max(contentTop, safeTop, fallbackTop);
+    root.style.setProperty("--tg-app-content-top", `${Math.round(top)}px`);
+  }
+
   function setTheme(value, save = true) {
     const theme = value === "light" ? "light" : "dark";
     document.documentElement.dataset.theme = theme;
@@ -213,11 +238,22 @@
   }
 
   function init() {
+    syncTelegramSafeArea();
     enhanceBrand();
     buildHeader();
     const initialTheme = localStorage.getItem("ai_signal_theme") || (tg && tg.colorScheme) || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     setTheme(initialTheme, false);
     translateStatic();
+
+    if (tg && typeof tg.onEvent === "function") {
+      try {
+        tg.onEvent("safeAreaChanged", syncTelegramSafeArea);
+        tg.onEvent("contentSafeAreaChanged", syncTelegramSafeArea);
+        tg.onEvent("viewportChanged", syncTelegramSafeArea);
+      } catch {}
+    }
+    setTimeout(syncTelegramSafeArea, 150);
+    setTimeout(syncTelegramSafeArea, 700);
 
     const resultCard = q("#resultCard");
     if (resultCard) {
@@ -225,7 +261,7 @@
     }
   }
 
-  window.AISignalUI = { locale, tr, haptic, setTheme, translateStatic, translateResultChrome };
+  window.AISignalUI = { locale, tr, haptic, setTheme, translateStatic, translateResultChrome, syncTelegramSafeArea };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
   else init();
