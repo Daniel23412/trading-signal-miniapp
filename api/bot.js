@@ -76,19 +76,18 @@ async function handleMessage(token, message) {
     return sendUser(token, chatId, argument);
   }
 
-  if (command === "/language") {
+  if (requiresLanguageSelection(command)) {
     await rememberUser(message.from, null);
     return sendLanguageChooser(token, chatId);
-  }
-  if (command === "/start") {
-    await rememberUser(message.from, null);
-    const saved = await getSavedLocale(message.from?.id);
-    return saved ? sendPremiumStart(token, chatId, saved) : sendLanguageChooser(token, chatId);
   }
 
   const locale = await getSavedLocale(message.from?.id);
   if (locale) return sendPremiumStart(token, chatId, locale);
   return sendLanguageChooser(token, chatId);
+}
+
+export function requiresLanguageSelection(command) {
+  return command === "/start" || command === "/language";
 }
 
 async function handleCallback(token, query) {
@@ -114,7 +113,7 @@ async function handleCallback(token, query) {
 }
 
 function chooseLanguageText() {
-  return "🌍 <b>Choose your language</b>\nВыберите язык / Sprache wählen / Elige tu idioma / Escolha seu idioma";
+  return "🌍 <b>CHOOSE YOUR LANGUAGE</b>\n\n👇 Select a language to continue:\nВыберите язык · Elige tu idioma · Pilih bahasa";
 }
 
 async function sendLanguageChooser(token, chatId) {

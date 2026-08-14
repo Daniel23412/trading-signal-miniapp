@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
-import handler from "./bot.js";
+import handler, { requiresLanguageSelection } from "./bot.js";
 
 function responseRecorder() {
   return {
@@ -34,6 +34,8 @@ test("language selection replaces the chooser with one premium open button", asy
     await handler({ method: "POST", headers, body: { message: { chat: { id: 9 }, from: { id: 867371536, language_code: "en" }, text: "/start" } } }, startRes);
     assert.equal(startRes.code, 200);
     assert.equal(calls[0].method, "sendMessage");
+    assert.match(calls[0].body.text, /CHOOSE YOUR LANGUAGE/);
+    assert.doesNotMatch(calls[0].body.text, /\$5|COMPLETELY FREE|registration/i);
     assert.equal(calls[0].body.reply_markup.inline_keyboard.length, 8);
 
     calls.length = 0;
@@ -44,7 +46,10 @@ test("language selection replaces the chooser with one premium open button", asy
     } } }, callbackRes);
     const edit = calls.find(call => call.method === "editMessageText");
     assert.ok(edit);
-    assert.match(edit.body.text, /chart analysis in seconds/i);
+    assert.match(edit.body.text, /WELCOME TO AI SIGNAL/);
+    assert.match(edit.body.text, /ACCESS IS COMPLETELY FREE/);
+    assert.match(edit.body.text, /2 simple conditions/);
+    assert.match(edit.body.text, /first deposit of at least <b>\$5<\/b>/);
     assert.equal(edit.body.reply_markup.inline_keyboard.length, 1);
     assert.equal(edit.body.reply_markup.inline_keyboard[0].length, 1);
     assert.match(edit.body.reply_markup.inline_keyboard[0][0].text, /OPEN AI SIGNAL/);
@@ -53,6 +58,12 @@ test("language selection replaces the chooser with one premium open button", asy
     global.fetch = oldFetch;
     process.env = oldEnv;
   }
+});
+
+test("start and language commands always require a language selection first", () => {
+  assert.equal(requiresLanguageSelection("/start"), true);
+  assert.equal(requiresLanguageSelection("/language"), true);
+  assert.equal(requiresLanguageSelection("hello"), false);
 });
 
 test("first bot update synchronizes public and admin command scopes", async () => {
