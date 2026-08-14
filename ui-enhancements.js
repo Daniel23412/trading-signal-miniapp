@@ -50,7 +50,7 @@
 
   function haptic(type = "light") {
     try {
-      if (tg && tg.HapticFeedback) {
+      if (tg && tg.initData && tg.HapticFeedback) {
         if (type === "selection" && tg.HapticFeedback.selectionChanged) tg.HapticFeedback.selectionChanged();
         else if (tg.HapticFeedback.impactOccurred) tg.HapticFeedback.impactOccurred("light");
       } else if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.isActive)) {
@@ -99,8 +99,10 @@
     if (meta) meta.setAttribute("content", color);
 
     try {
-      if (tg && tg.setHeaderColor) tg.setHeaderColor(color);
-      if (tg && tg.setBackgroundColor) tg.setBackgroundColor(color);
+      const canStyleTelegram = Boolean(tg && tg.initData) &&
+        (typeof tg.isVersionAtLeast !== "function" || tg.isVersionAtLeast("6.1"));
+      if (canStyleTelegram && tg.setHeaderColor) tg.setHeaderColor(color);
+      if (canStyleTelegram && tg.setBackgroundColor) tg.setBackgroundColor(color);
     } catch {}
 
     if (save) localStorage.setItem("ai_signal_theme", theme);
@@ -259,11 +261,11 @@
     syncTelegramSafeArea();
     enhanceBrand();
     buildHeader();
-    const initialTheme = localStorage.getItem("ai_signal_theme") || (tg && tg.colorScheme) || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    const initialTheme = localStorage.getItem("ai_signal_theme") || (tg && tg.initData && tg.colorScheme) || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     setTheme(initialTheme, false);
     translateStatic();
 
-    if (tg && typeof tg.onEvent === "function") {
+    if (tg && tg.initData && typeof tg.onEvent === "function") {
       try {
         tg.onEvent("safeAreaChanged", syncTelegramSafeArea);
         tg.onEvent("contentSafeAreaChanged", syncTelegramSafeArea);

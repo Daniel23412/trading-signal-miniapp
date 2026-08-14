@@ -8,8 +8,10 @@
       if (tg) {
         if (typeof tg.ready === "function") tg.ready();
         if (typeof tg.expand === "function") tg.expand();
-        if (typeof tg.setHeaderColor === "function") tg.setHeaderColor("#080b10");
-        if (typeof tg.setBackgroundColor === "function") tg.setBackgroundColor("#080b10");
+        const canStyleTelegram = Boolean(tg.initData) &&
+          (typeof tg.isVersionAtLeast !== "function" || tg.isVersionAtLeast("6.1"));
+        if (canStyleTelegram && typeof tg.setHeaderColor === "function") tg.setHeaderColor("#080b10");
+        if (canStyleTelegram && typeof tg.setBackgroundColor === "function") tg.setBackgroundColor("#080b10");
       }
     } catch (e) {
       console.warn("Telegram WebApp init skipped", e);
@@ -876,7 +878,7 @@
 
     function haptic(type) {
       try {
-        if (tg && tg.HapticFeedback) {
+        if (tg && tg.initData && tg.HapticFeedback) {
           if (
             type === "selection" &&
             typeof tg.HapticFeedback.selectionChanged === "function"
