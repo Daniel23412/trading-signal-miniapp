@@ -25,3 +25,25 @@ test("follow-up route requires Vercel cron authorization", async () => {
     else process.env.CRON_SECRET = oldSecret;
   }
 });
+
+test("official Vercel schedule header is a constrained fallback when no secret exists", async () => {
+  const oldSecret = process.env.CRON_SECRET;
+  const oldDatabase = process.env.DATABASE_URL;
+  const oldToken = process.env.BOT_TOKEN;
+  delete process.env.CRON_SECRET;
+  delete process.env.DATABASE_URL;
+  delete process.env.BOT_TOKEN;
+  try {
+    const unauthorized = res();
+    await handler({ method: "GET", headers: {} }, unauthorized);
+    assert.equal(unauthorized.code, 401);
+    const scheduled = res();
+    await handler({ method: "GET", headers: { "x-vercel-cron-schedule": "0 10 * * *" } }, scheduled);
+    assert.equal(scheduled.code, 503);
+    assert.equal(scheduled.body.error, "service_not_configured");
+  } finally {
+    if (oldSecret === undefined) delete process.env.CRON_SECRET; else process.env.CRON_SECRET = oldSecret;
+    if (oldDatabase === undefined) delete process.env.DATABASE_URL; else process.env.DATABASE_URL = oldDatabase;
+    if (oldToken === undefined) delete process.env.BOT_TOKEN; else process.env.BOT_TOKEN = oldToken;
+  }
+});

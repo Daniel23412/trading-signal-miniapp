@@ -3,14 +3,16 @@ import { claimDueFollowups, databaseConfigured, getAccessStatus, markFollowupSen
 import { getBotCopy, normalizeLocale } from "../lib/locales.js";
 
 const DEFAULT_MINIAPP_URL = "https://trading-signal-miniapp-clean-vercel.vercel.app";
+const CRON_SCHEDULE = "0 10 * * *";
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "GET") return res.status(405).json({ ok: false, error: "method_not_allowed" });
   const cronSecret = String(process.env.CRON_SECRET || "");
-  if (!cronSecret) return res.status(503).json({ ok: false, error: "cron_not_configured" });
   const received = String(req.headers?.authorization || "").replace(/^Bearer\s+/i, "");
-  if (!safeEqual(cronSecret, received)) return res.status(401).json({ ok: false, error: "unauthorized" });
+  const vercelSchedule = String(req.headers?.["x-vercel-cron-schedule"] || "");
+  const authorized = cronSecret ? safeEqual(cronSecret, received) : vercelSchedule === CRON_SCHEDULE;
+  if (!authorized) return res.status(401).json({ ok: false, error: "unauthorized" });
   if (!databaseConfigured() || !process.env.BOT_TOKEN) return res.status(503).json({ ok: false, error: "service_not_configured" });
 
   const due = await claimDueFollowups(50);
