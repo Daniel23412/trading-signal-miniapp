@@ -21,6 +21,11 @@
 - загрузка файлом, drag & drop и вставка изображения из буфера;
 - haptic feedback внутри Telegram;
 - порог уверенности задаётся через `MIN_CONFIDENCE`.
+- отдельный quality gate проверяет читаемость, свечи и таймфрейм до направления;
+- выбранный язык, GEO, источник, регистрация и первый депозит синхронизируются через Railway Postgres;
+- история последних трёх анализов живёт только в памяти вкладки и не содержит изображений;
+- Telegram-админка: `/stats`, `/today`, `/user <telegram_id>`;
+- одно мягкое follow-up сообщение после регистрации без депозита (Vercel Cron).
 
 ## 1. Создать Telegram-бота
 
@@ -61,7 +66,24 @@ POSTBACK_SECRET=replace-with-a-long-random-secret
 INSTALL_SECRET=replace-with-a-different-long-random-secret
 AFFILIATE_REF_URL=https://lkus.cc/f6f3ab
 MINIAPP_URL=https://trading-signal-miniapp-clean-vercel.vercel.app
+POSTBACK_LOG_CHAT_ID=123456789
+ADMIN_TELEGRAM_IDS=123456789
+FOLLOWUP_DELAY_HOURS=6
+CRON_SECRET=replace-with-a-long-random-secret
 ```
+
+Опциональные GEO-настройки:
+
+```env
+# Если список пуст, разрешены все определённые и неопределённые GEO.
+ALLOWED_GEO_COUNTRIES=DE,FR,IT,ES,BR
+
+# Разные офферы по стране; ключ default используется как fallback.
+AFFILIATE_REF_URLS={"DE":"https://example.com/de","BR":"https://example.com/br","default":"https://example.com"}
+```
+
+При отсутствующем или служебном GEO (`XX`, `ZZ`, proxy-заглушки) система не угадывает страну: в логе будет
+`GEO: не определено`, а язык берётся из сохранённого выбора или Telegram.
 
 После деплоя получишь адрес вида:
 
@@ -85,6 +107,10 @@ node scripts/set-webapp-menu.mjs
 
 После этого в чате с ботом появится кнопка, открывающая приложение.
 
+После установки webhook доступны пользовательские команды `/start`, `/language`. Для ID из
+`ADMIN_TELEGRAM_IDS` доступны `/stats`, `/today` и `/user 867371536`. Если лог пишется в группу,
+команды также разрешены администраторам этой группы.
+
 В production также есть защищённый одноразовый установщик webhook. Он работает только с
 `INSTALL_SECRET` (или с `POSTBACK_SECRET`, если отдельный секрет не задан):
 
@@ -93,6 +119,10 @@ https://your-project.vercel.app/api/install-bot?secret=YOUR_INSTALL_SECRET
 ```
 
 Не публикуй эту ссылку и не передавай секрет пользователям.
+
+Vercel Cron вызывает `/api/follow-up` ежедневно и передаёт `CRON_SECRET` в заголовке Authorization.
+Каждому пользователю отправляется не более одного напоминания; кнопка «не напоминать» отключает его до
+следующего явного изменения в базе.
 
 ## Локальный тест
 

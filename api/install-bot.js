@@ -29,10 +29,28 @@ export default async function handler(req,res){
         {command:"language",description:"Change language"}
       ]
     });
+    const adminScopes = [...new Set([
+      ...String(process.env.ADMIN_TELEGRAM_IDS || process.env.BOT_ADMIN_IDS || "").split(","),
+      process.env.POSTBACK_LOG_CHAT_ID || ""
+    ].map(value=>value.trim()).filter(value=>/^-?\d+$/.test(value)))];
+    let adminCommands = 0;
+    for(const chatId of adminScopes){
+      await telegram(token,"setMyCommands",{
+        scope:{type:"chat",chat_id:chatId},
+        commands:[
+          {command:"start",description:"Start / Choose language"},
+          {command:"language",description:"Change language"},
+          {command:"stats",description:"All-time funnel stats"},
+          {command:"today",description:"Today funnel stats"},
+          {command:"user",description:"User status by Telegram ID"}
+        ]
+      });
+      adminCommands += 1;
+    }
     const menu = await telegram(token,"setChatMenuButton",{
       menu_button:{type:"web_app",text:"AI SIGNAL",web_app:{url:base}}
     });
-    return res.status(200).json({ok:true,webhook:Boolean(webhook),commands:Boolean(commands),menu:Boolean(menu),webhook_url:webhookUrl});
+    return res.status(200).json({ok:true,webhook:Boolean(webhook),commands:Boolean(commands),admin_commands:adminCommands,menu:Boolean(menu),webhook_url:webhookUrl});
   }catch(error){
     console.error("Bot installation failed",error?.message || error);
     return res.status(500).json({ok:false,error:"install_failed"});

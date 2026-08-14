@@ -28,6 +28,12 @@ test("analyze returns normalized signal with mocked OpenAI", async () => {
         output: [{
           type: "message",
           content: [{ type: "output_text", text: JSON.stringify({
+            has_candles: true,
+            timeframe_readable: true,
+            screenshot_readability: "high",
+            chart_type: "candlestick",
+            quality_ok: true,
+            quality_reason: "График читаемый.",
             signal: "UP",
             confidence: 84,
             chart_quality: "good",
@@ -53,6 +59,8 @@ test("analyze returns normalized signal with mocked OpenAI", async () => {
   await handler(req, res);
   assert.equal(res.code, 200);
   assert.equal(res.body.result.signal, "UP");
+  assert.equal(res.body.result.quality_ok, true);
+  assert.equal(res.body.meta.quality_gate, "v2");
   assert.equal(res.body.meta.model, "gpt-5.6-luna");
 
   global.fetch = oldFetch;

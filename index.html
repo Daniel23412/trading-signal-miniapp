@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta id="themeColorMeta" name="theme-color" content="#080b10">
   <title>AI Trading Signal</title>
-  <link rel="stylesheet" href="/styles.css?v=6">
-  <link rel="stylesheet" href="/enhancements.css?v=6">
+  <link rel="stylesheet" href="/styles.css?v=7">
+  <link rel="stylesheet" href="/enhancements.css?v=7">
   <style>
     .app-shell{
       padding-top:calc(
@@ -202,7 +202,35 @@
     </div>
   </section>
 
+  <section id="screenSuccess" class="screen success-screen" aria-live="polite">
+    <div class="success-card">
+      <div class="success-aura" aria-hidden="true"></div>
+      <div class="success-check" aria-hidden="true"><span>✓</span></div>
+      <div id="successKicker" class="success-kicker">ACCESS GRANTED</div>
+      <h1 id="successTitle">Доступ открыт</h1>
+      <p id="successDesc">Регистрация и депозит подтверждены. AI SIGNAL готов к анализу.</p>
+      <div class="success-proof">
+        <div><span id="successRegLabel">Регистрация</span><strong id="successReg">✓</strong></div>
+        <div><span id="successDepLabel">Депозит</span><strong id="successDep">$5 ✓</strong></div>
+      </div>
+      <button id="startAnalysisBtn" class="primary-btn success-start" type="button">
+        <span class="spark">✦</span><span>НАЧАТЬ АНАЛИЗ</span>
+      </button>
+    </div>
+  </section>
+
   <section id="screenInput" class="screen">
+    <section id="accessSummary" class="access-summary panel" aria-live="polite">
+      <div class="access-summary-head">
+        <span id="accessSummaryTitle">СТАТУС ДОСТУПА</span>
+        <strong id="accessActiveLabel"><i></i> ДОСТУП АКТИВЕН</strong>
+      </div>
+      <div class="access-summary-grid">
+        <div><span id="summaryRegLabel">Регистрация</span><strong id="summaryRegValue">✓</strong></div>
+        <div><span id="summaryDepLabel">Депозит</span><strong id="summaryDepValue">$5 ✓</strong></div>
+      </div>
+    </section>
+
     <div class="hero">
       <div class="eyebrow"><span></span> AI CHART ANALYSIS</div>
       <h1>Загрузи график.<br><em>Получи направление.</em></h1>
@@ -243,6 +271,14 @@
       <span class="spark">✦</span><span>ПОЛУЧИТЬ СИГНАЛ</span>
     </button>
     <p class="risk-note">AI-анализ не является гарантией результата. При неясном графике бот покажет «Нет сигнала».</p>
+
+    <section id="sessionHistory" class="panel session-history hidden" aria-live="polite">
+      <div class="history-head">
+        <div><strong id="historyTitle">ИСТОРИЯ СЕССИИ</strong><small id="historyNote">Последние 3 анализа · без изображений</small></div>
+        <span id="historyCount">0 / 3</span>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </section>
   </section>
 
   <section id="screenLoading" class="screen loading-screen">
@@ -276,6 +312,15 @@
         <div><span>Параметры</span><strong id="paramsText">M5 · 3 мин</strong></div>
       </div>
       <div class="reason-box"><span>Почему</span><p id="reasonText">—</p></div>
+      <div class="quality-box">
+        <div class="quality-head"><span id="qualityTitle">ПРОВЕРКА СКРИНШОТА</span><small id="qualityState">—</small></div>
+        <div class="quality-grid">
+          <div><span id="qualityScreenshotLabel">Читаемость</span><strong id="qualityScreenshot">—</strong></div>
+          <div><span id="qualityCandlesLabel">Свечи</span><strong id="qualityCandles">—</strong></div>
+          <div><span id="qualityTimeframeLabel">Таймфрейм</span><strong id="qualityTimeframe">—</strong></div>
+        </div>
+        <p id="qualityReason">—</p>
+      </div>
     </div>
     <button id="newAnalysisBtn" class="primary-btn" type="button">НОВЫЙ АНАЛИЗ</button>
     <p class="risk-note">Не воспринимай показатель уверенности как вероятность выигрыша.</p>
@@ -283,10 +328,11 @@
 
   <div id="toast" class="toast"></div>
 </main>
-<script src="/launch-locale.js?v=1" defer></script>
+<script src="/launch-locale.js?v=2" defer></script>
 <script src="/i18n.js?v=1" defer></script>
-<script src="/app.js?v=7" defer></script>
-<script src="/ui-enhancements.js?v=11" defer></script>
-<script src="/trading-ambience.js?v=3" defer></script>
+<script src="/i18n-extra.js?v=1" defer></script>
+<script src="/app.js?v=8" defer></script>
+<script src="/ui-enhancements.js?v=12" defer></script>
+<script src="/trading-ambience.js?v=4" defer></script>
 </body>
 </html>

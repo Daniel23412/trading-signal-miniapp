@@ -29,6 +29,9 @@ test("bot installer configures webhook, commands and menu with a valid secret", 
   process.env.BOT_TOKEN = "123:test-token";
   process.env.INSTALL_SECRET = "install-secret";
   process.env.MINIAPP_URL = "https://example.vercel.app";
+  delete process.env.ADMIN_TELEGRAM_IDS;
+  delete process.env.BOT_ADMIN_IDS;
+  delete process.env.POSTBACK_LOG_CHAT_ID;
   const previousFetch = global.fetch;
   const methods = [];
   global.fetch = async (url) => {

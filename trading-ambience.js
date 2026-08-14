@@ -11,7 +11,7 @@
     style.id = "tradingAmbienceStyles";
     style.textContent = `
       .app-shell{position:relative;z-index:2}
-      .trading-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;background:radial-gradient(circle at 82% 7%,rgba(183,255,54,.11),transparent 23rem),radial-gradient(circle at 8% 40%,rgba(40,148,255,.10),transparent 28rem),linear-gradient(180deg,rgba(3,7,12,.08),rgba(3,7,12,.3))}
+      .trading-bg{position:fixed;inset:-18px;z-index:0;pointer-events:none;overflow:hidden;background:radial-gradient(circle at 82% 7%,rgba(183,255,54,.11),transparent 23rem),radial-gradient(circle at 8% 40%,rgba(40,148,255,.10),transparent 28rem),linear-gradient(180deg,rgba(3,7,12,.08),rgba(3,7,12,.3));transform:translate3d(var(--ambience-x,0),var(--ambience-y,0),0) scale(1.018);transition:transform .24s ease-out;will-change:transform}
       .trading-grid{position:absolute;inset:0;opacity:.25;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:32px 32px;mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.72) 58%,transparent 100%)}
       .trading-glow{position:absolute;border-radius:50%;filter:blur(46px);opacity:.22;will-change:transform}.trading-glow.a{width:210px;height:210px;top:24%;left:-40px;background:rgba(183,255,54,.34);animation:tradeGlowA 8s ease-in-out infinite alternate}.trading-glow.b{width:250px;height:250px;top:50%;right:-70px;background:rgba(35,154,255,.28);animation:tradeGlowB 10s ease-in-out infinite alternate}
       @keyframes tradeGlowA{to{transform:translate(65px,-18px) scale(1.12)}}@keyframes tradeGlowB{to{transform:translate(-55px,24px) scale(1.08)}}
@@ -50,6 +50,7 @@
     buildBackground();
     buildMarketFooter();
     startMarketNumbers();
+    startParallax();
   }
 
   function buildBackground() {
@@ -93,6 +94,36 @@
     const tick = () => cards.forEach((el, i) => animateValue(el, reduceMotion ? 0 : 820 + i * 110));
     tick();
     if (!reduceMotion) marketTimer = window.setInterval(tick, 2900);
+  }
+
+  function startParallax() {
+    if (reduceMotion) return;
+    const coarsePointer = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+    const root = document.documentElement;
+    if (!coarsePointer) root.dataset.depth = "active";
+    let pointerX = 0;
+    let pointerY = 0;
+    let scrollY = 0;
+    let frame = 0;
+    const paint = () => {
+      frame = 0;
+      root.style.setProperty("--ambience-x", `${(-pointerX * 7).toFixed(2)}px`);
+      root.style.setProperty("--ambience-y", `${(-pointerY * 6 + scrollY).toFixed(2)}px`);
+      root.style.setProperty("--depth-x", `${(pointerX * 1.7).toFixed(2)}px`);
+      root.style.setProperty("--depth-y", `${(pointerY * 1.4 + scrollY * .16).toFixed(2)}px`);
+    };
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(paint); };
+    if (!coarsePointer) {
+      window.addEventListener("pointermove", event => {
+        pointerX = Math.max(-1, Math.min(1, event.clientX / Math.max(1, innerWidth) * 2 - 1));
+        pointerY = Math.max(-1, Math.min(1, event.clientY / Math.max(1, innerHeight) * 2 - 1));
+        schedule();
+      }, { passive: true });
+    }
+    window.addEventListener("scroll", () => {
+      scrollY = Math.max(-4, Math.min(4, window.scrollY * -.012));
+      schedule();
+    }, { passive: true });
   }
 
   function animateValue(el, duration) {

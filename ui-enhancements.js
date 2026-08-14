@@ -221,6 +221,7 @@
         event.stopPropagation();
         localStorage.setItem("ai_signal_locale", language);
         localStorage.setItem("ai_signal_country", country);
+        window.AI_LOCALE_EXPLICIT = true;
         paint();
         translateStatic();
         menu.classList.add("hidden");
@@ -276,10 +277,6 @@
     setTimeout(syncTelegramSafeArea, 500);
     setTimeout(syncTelegramSafeArea, 1200);
 
-    const resultCard = q("#resultCard");
-    if (resultCard) {
-      new MutationObserver(() => translateResultChrome()).observe(resultCard, { attributes: true, attributeFilter: ["class"] });
-    }
   }
 
   window.AISignalUI = { locale, tr, haptic, setTheme, translateStatic, translateResultChrome, syncTelegramSafeArea };

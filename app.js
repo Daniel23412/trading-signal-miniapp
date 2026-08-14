@@ -24,7 +24,13 @@
       access: null,
       accessMode: "",
       accessChecking: false,
-      referralUrl: null
+      referralUrl: null,
+      geo: null,
+      history: [],
+      lastResult: null,
+      lastMeta: null,
+      toastKey: null,
+      toastDictionary: "ui"
     };
 
     const ACCESS_TEXT = {
@@ -321,7 +327,10 @@
     const $ = (s) => document.querySelector(s);
     const els = {
       screenAccess: $("#screenAccess"),
+      screenSuccess: $("#screenSuccess"),
+      screenInput: $("#screenInput"),
       screenLoading: $("#screenLoading"),
+      screenResult: $("#screenResult"),
       accessTitle: $("#accessTitle"),
       accessDesc: $("#accessDesc"),
       accessRegStep: $("#accessRegStep"),
@@ -334,6 +343,22 @@
       registerBtnText: $("#registerBtnText"),
       checkAccessBtn: $("#checkAccessBtn"),
       accessHint: $("#accessHint"),
+
+      successKicker: $("#successKicker"),
+      successTitle: $("#successTitle"),
+      successDesc: $("#successDesc"),
+      successRegLabel: $("#successRegLabel"),
+      successDepLabel: $("#successDepLabel"),
+      successReg: $("#successReg"),
+      successDep: $("#successDep"),
+      startAnalysisBtn: $("#startAnalysisBtn"),
+
+      accessSummaryTitle: $("#accessSummaryTitle"),
+      accessActiveLabel: $("#accessActiveLabel"),
+      summaryRegLabel: $("#summaryRegLabel"),
+      summaryRegValue: $("#summaryRegValue"),
+      summaryDepLabel: $("#summaryDepLabel"),
+      summaryDepValue: $("#summaryDepValue"),
 
       input: $("#fileInput"),
       uploadBox: $("#uploadBox"),
@@ -352,7 +377,21 @@
       trendText: $("#trendText"),
       paramsText: $("#paramsText"),
       reasonText: $("#reasonText"),
+      qualityTitle: $("#qualityTitle"),
+      qualityState: $("#qualityState"),
+      qualityScreenshotLabel: $("#qualityScreenshotLabel"),
+      qualityScreenshot: $("#qualityScreenshot"),
+      qualityCandlesLabel: $("#qualityCandlesLabel"),
+      qualityCandles: $("#qualityCandles"),
+      qualityTimeframeLabel: $("#qualityTimeframeLabel"),
+      qualityTimeframe: $("#qualityTimeframe"),
+      qualityReason: $("#qualityReason"),
       newAnalysis: $("#newAnalysisBtn"),
+      sessionHistory: $("#sessionHistory"),
+      historyTitle: $("#historyTitle"),
+      historyNote: $("#historyNote"),
+      historyCount: $("#historyCount"),
+      historyList: $("#historyList"),
       toast: $("#toast"),
       tgBadge: $("#tgBadge")
     };
@@ -380,6 +419,15 @@
       return normalizeLocale(fromStorage || fromTelegram || navigator.language || "ru");
     }
 
+    function currentLocaleSource() {
+      if (window.AI_LOCALE_EXPLICIT) return "explicit";
+      return localStorage.getItem("ai_signal_locale") ? "stored" : "fallback";
+    }
+
+    function requestSource() {
+      return String(window.AI_SIGNAL_SOURCE || "miniapp").slice(0, 80);
+    }
+
     function t(key, fallback) {
       const locale = currentLocale();
       const value = I18N[locale] && I18N[locale][key];
@@ -403,6 +451,10 @@
       resetImage();
     });
     els.analyze.addEventListener("click", analyze);
+    els.startAnalysisBtn.addEventListener("click", () => {
+      showScreen("screenInput");
+      haptic("success");
+    });
     els.newAnalysis.addEventListener("click", () => {
       resetImage();
       if (state.access?.allowed) showScreen("screenInput");
@@ -410,12 +462,20 @@
     });
     els.registerBtn.addEventListener("click", openReferral);
     els.checkAccessBtn.addEventListener("click", () => checkAccess(true));
-    window.addEventListener("ai-signal:locale-change", () => {
+    window.addEventListener("ai-signal:locale-change", (event) => {
       paintAccess(state.access, state.accessMode);
+      paintSuccess(state.access);
+      paintAccessSummary(state.access);
+      renderHistory();
+      if (state.lastResult && state.lastMeta) renderResult(state.lastResult, state.lastMeta, false);
       if (els.screenLoading.classList.contains("active")) {
         const messages = t("loadingMessages", []);
         if (Array.isArray(messages) && messages[0]) els.loadingText.textContent = messages[0];
       }
+      if (state.toastKey && els.toast.classList.contains("show")) {
+        els.toast.textContent = state.toastDictionary === "access" ? at(state.toastKey) : t(state.toastKey, state.toastKey);
+      }
+      if (event?.detail?.locale && event.detail.persist !== false) persistLocale(event.detail.locale);
     });
 
     document.querySelectorAll(".segmented").forEach((group) => {
@@ -469,6 +529,7 @@
     });
 
     let accessPoll = null;
+    let localeSaveChain = Promise.resolve();
 
     function canPollAccess() {
       return Boolean(tg && tg.initData) && document.visibilityState !== "hidden";
@@ -489,12 +550,45 @@
       accessPoll = null;
     }
 
+    function persistLocale(locale) {
+      if (!tg?.initData) return Promise.resolve();
+      localeSaveChain = localeSaveChain.catch(() => {}).then(async () => {
+        try {
+          const response = await fetch("/api/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "set_locale", locale, source: requestSource(), tgInitData: tg.initData })
+          });
+          if (response.ok && currentLocale() === locale) showToastKey("localeSaved");
+        } catch (error) {
+          console.warn("Locale persistence failed", error);
+        }
+      });
+      return localeSaveChain;
+    }
+
+    function applyServerLocale(locale) {
+      const selected = normalizeLocale(locale);
+      if (!selected || selected === currentLocale()) return;
+      localStorage.setItem("ai_signal_locale", selected);
+      const country = ({ru:"ru",en:"us",de:"de",fr:"fr",it:"it",es:"es",pt:"br",ja:"jp",hi:"in",id:"id",ko:"kr",tr:"tr",uk:"ua",sv:"se",no:"no",zh:"cn"})[selected];
+      if (country) localStorage.setItem("ai_signal_country", country);
+      window.AI_LOCALE_EXPLICIT = false;
+      if (window.AISignalUI?.translateStatic) window.AISignalUI.translateStatic();
+      window.dispatchEvent(new CustomEvent("ai-signal:locale-change", { detail: { locale: selected, country, persist: false, source: "server" } }));
+    }
+
     paintAccess(null);
+    paintSuccess(null);
+    paintAccessSummary(null);
+    renderHistory();
     startAccessPolling();
     checkAccess(false);
 
     async function checkAccess(userInitiated = false) {
       if (state.accessChecking) return;
+      const previousAccess = state.access;
+      const requestedLocale = currentLocale();
       state.accessChecking = true;
 
       els.checkAccessBtn.disabled = true;
@@ -506,7 +600,9 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "access_status",
-            locale: currentLocale(),
+            locale: requestedLocale,
+            locale_source: currentLocaleSource(),
+            source: requestSource(),
             tgInitData: tg && tg.initData ? tg.initData : ""
           })
         });
@@ -531,14 +627,18 @@
           return;
         }
 
+        if (data.locale && currentLocale() === requestedLocale) applyServerLocale(data.locale);
+        state.geo = data.geo || null;
         state.access = data.access;
         paintAccess(data.access);
+        paintAccessSummary(data.access);
+        paintSuccess(data.access);
 
         if (data.access.allowed) {
           stopAccessPolling();
-          if (userInitiated) toast(at("granted"));
+          if (userInitiated) showToastKey("accessGrantedToast");
           haptic("success");
-          showScreen("screenInput");
+          showScreen(shouldShowSuccess(data.access, previousAccess) ? "screenSuccess" : "screenInput");
         } else {
           startAccessPolling();
           showScreen("screenAccess");
@@ -597,6 +697,41 @@
       els.checkAccessBtn.disabled = telegramMissing;
     }
 
+    function shouldShowSuccess(access, previousAccess) {
+      if (!access?.allowed) return false;
+      const token = String(access.access_granted_at || access.deposit_at || "");
+      if (!token || localStorage.getItem("ai_signal_seen_access_grant") === token) return false;
+      const grantedAt = new Date(access.access_granted_at || access.deposit_at).getTime();
+      const recent = Number.isFinite(grantedAt) && Date.now() - grantedAt < 48 * 60 * 60 * 1000;
+      const transitioned = Boolean(previousAccess && !previousAccess.allowed);
+      if (!recent && !transitioned) return false;
+      localStorage.setItem("ai_signal_seen_access_grant", token);
+      return true;
+    }
+
+    function paintSuccess(access) {
+      const amount = Number(access?.deposit_amount || access?.min_deposit || 5);
+      els.successKicker.textContent = t("successKicker", "ACCESS GRANTED");
+      els.successTitle.textContent = t("successTitle", "Access granted");
+      els.successDesc.textContent = t("successDesc", "Registration and deposit are confirmed. AI SIGNAL is ready.");
+      els.successRegLabel.textContent = t("registrationShort", "Registration");
+      els.successDepLabel.textContent = t("depositShort", "Deposit");
+      els.successReg.textContent = "✓";
+      els.successDep.textContent = `$${formatMoney(amount)} ✓`;
+      els.startAnalysisBtn.querySelector("span:last-child").textContent = t("startAnalysis", "START ANALYSIS");
+    }
+
+    function paintAccessSummary(access) {
+      const amount = Number(access?.deposit_amount || access?.min_deposit || 5);
+      els.accessSummaryTitle.textContent = t("accessSummaryTitle", "ACCESS STATUS");
+      const dot = document.createElement("i");
+      els.accessActiveLabel.replaceChildren(dot, document.createTextNode(" " + t("accessActive", "ACCESS ACTIVE")));
+      els.summaryRegLabel.textContent = t("registrationShort", "Registration");
+      els.summaryDepLabel.textContent = t("depositShort", "Deposit");
+      els.summaryRegValue.textContent = access?.registered ? "✓" : "—";
+      els.summaryDepValue.textContent = access?.deposit_ok ? `$${formatMoney(amount)} ✓` : "—";
+    }
+
     async function openReferral() {
       els.registerBtn.disabled = true;
       const oldText = els.registerBtnText.textContent;
@@ -610,6 +745,8 @@
           body: JSON.stringify({
             action: "referral",
             locale: currentLocale(),
+            locale_source: currentLocaleSource(),
+            source: requestSource(),
             tgInitData: tg && tg.initData ? tg.initData : ""
           })
         });
@@ -620,8 +757,9 @@
         } catch {}
 
         if (!response.ok || !data?.url) {
-          if (response.status === 401) throw new Error(at("telegramOnly"));
-          throw new Error(at("unavailable"));
+          if (response.status === 401) throw translatedError("telegramOnly", "access");
+          if (response.status === 451 || data?.error === "geo_not_supported") throw translatedError("geoUnsupported");
+          throw translatedError("unavailable", "access");
         }
 
         state.referralUrl = data.url;
@@ -637,7 +775,7 @@
         }
       } catch (error) {
         console.error(error);
-        toast(error.message || at("unavailable"));
+        toast(error.message || at("unavailable"), error.translationKey, error.translationDictionary);
       } finally {
         els.registerBtn.disabled = false;
         els.registerBtnText.textContent = oldText;
@@ -652,10 +790,10 @@
 
       if (!file) return;
       if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) {
-        return toast(t("supported", "JPG, PNG and WEBP are supported."));
+        return showToastKey("supported", "JPG, PNG and WEBP are supported.");
       }
       if (file.size > 12 * 1024 * 1024) {
-        return toast(t("sourceTooLarge", "The source file is too large."));
+        return showToastKey("sourceTooLarge", "The source file is too large.");
       }
 
       els.uploadBox.classList.add("is-reading");
@@ -664,7 +802,7 @@
       try {
         const dataUrl = await compressImage(file, 1600, 0.84);
         if (dataUrl.length > 3000000) {
-          return toast(t("compressFailed", "The image could not be reduced enough."));
+          return showToastKey("compressFailed", "The image could not be reduced enough.");
         }
 
         state.image = dataUrl;
@@ -676,7 +814,7 @@
         haptic("success");
       } catch (e) {
         console.error(e);
-        toast(t("readFailed", "Could not read the image."));
+        showToastKey("readFailed", "Could not read the image.");
       } finally {
         els.uploadBox.classList.remove("is-reading");
       }
@@ -699,7 +837,7 @@
       }
 
       if (!state.image) {
-        return toast(t("uploadFirst", "Upload a chart screenshot first."));
+        return showToastKey("uploadFirst", "Upload a chart screenshot first.");
       }
 
       const startedAt = performance.now();
@@ -741,6 +879,8 @@
             timeframe: state.timeframe,
             expiration: state.expiration,
             locale: currentLocale(),
+            locale_source: currentLocaleSource(),
+            source: requestSource(),
             tgInitData: tg && tg.initData ? tg.initData : ""
           })
         });
@@ -761,21 +901,22 @@
         }
 
         if (!response.ok) {
-          throw new Error(
-            readableApiError(data && data.error, data && data.reason, data && data.message)
-          );
+          throw readableApiError(data && data.error, data && data.reason, data && data.message);
         }
 
         const elapsed = performance.now() - startedAt;
         if (elapsed < minLoadingMs) await delay(minLoadingMs - elapsed);
 
-        renderResult(data.result, data.meta);
+        state.lastResult = data.result;
+        state.lastMeta = data.meta;
+        renderResult(data.result, data.meta, true);
+        addHistory(data.result, data.meta);
         haptic(data.result.signal === "NO_SIGNAL" ? "warning" : "success");
         showScreen("screenResult");
       } catch (error) {
         console.error(error);
         showScreen("screenInput");
-        toast(error.message || t("retry", "Analysis error. Try again."));
+        toast(error.message || t("retry", "Analysis error. Try again."), error.translationKey || "retry", error.translationDictionary || "ui");
         haptic("error");
       } finally {
         clearInterval(textTimer);
@@ -783,7 +924,7 @@
       }
     }
 
-    function renderResult(result, meta) {
+    function renderResult(result, meta, animate = true) {
       els.resultCard.className = "result-card";
       els.resultIcon.className = "result-icon";
 
@@ -809,18 +950,18 @@
         els.resultCard.classList.add("neutral");
         els.resultIcon.textContent = "•";
         els.resultTitle.textContent = t("noSignal", "NO SIGNAL");
-        els.resultSub.textContent = result.invalid_chart
+        els.resultSub.textContent = result.invalid_chart || !result.quality_ok
           ? t("invalidChart", "The chart could not be read reliably")
           : t("skipSetup", "Better to skip this setup");
       }
 
       els.confidenceText.textContent = String(result.confidence) + "%";
-      els.confidenceBar.style.width = "0%";
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
+      if (animate) {
+        els.confidenceBar.style.width = "0%";
+        requestAnimationFrame(() => requestAnimationFrame(() => {
           els.confidenceBar.style.width = String(result.confidence) + "%";
-        })
-      );
+        }));
+      } else els.confidenceBar.style.width = String(result.confidence) + "%";
 
       const trendFallback = result.signal === "UP"
         ? t("up", "UP")
@@ -830,14 +971,74 @@
       const reasonFallback = result.signal === "NO_SIGNAL"
         ? t("skipSetup", "Better to skip this setup")
         : t("directionShown", "Direction is visible on the current screenshot");
-      els.trendText.textContent = safeModelText(result.trend, trendFallback);
+      const resultLanguageMatches = !meta.locale || meta.locale === currentLocale();
+      els.trendText.textContent = resultLanguageMatches ? safeModelText(result.trend, trendFallback) : trendFallback;
       els.paramsText.textContent =
         meta.timeframe +
         " · " +
         meta.expiration_minutes +
         " " +
         t("minShort", "min");
-      els.reasonText.textContent = safeModelText(result.reason, reasonFallback);
+      els.reasonText.textContent = resultLanguageMatches ? safeModelText(result.reason, reasonFallback) : reasonFallback;
+      renderQuality(result, resultLanguageMatches);
+    }
+
+    function renderQuality(result, languageMatches) {
+      const readabilityKey = result.screenshot_readability === "high"
+        ? "readabilityHigh"
+        : result.screenshot_readability === "medium"
+        ? "readabilityMedium"
+        : "readabilityLow";
+      els.qualityTitle.textContent = t("qualityTitle", "SCREENSHOT CHECK");
+      els.qualityState.textContent = result.quality_ok ? t("qualityPassed", "Check passed") : t("qualityRejected", "Check failed");
+      els.qualityState.className = result.quality_ok ? "ok" : "bad";
+      els.qualityScreenshotLabel.textContent = t("screenshotReadability", "Readability");
+      els.qualityCandlesLabel.textContent = t("candlesVisible", "Candles");
+      els.qualityTimeframeLabel.textContent = t("timeframeReadable", "Timeframe");
+      els.qualityScreenshot.textContent = t(readabilityKey, result.screenshot_readability || "—");
+      els.qualityCandles.textContent = result.has_candles ? t("present", "Present") : t("missing", "Missing");
+      els.qualityTimeframe.textContent = result.timeframe_readable ? t("readable", "Readable") : t("unreadable", "Unreadable");
+      els.qualityScreenshot.className = result.screenshot_readability === "low" ? "bad" : "ok";
+      els.qualityCandles.className = result.has_candles ? "ok" : "bad";
+      els.qualityTimeframe.className = result.timeframe_readable ? "ok" : "bad";
+      els.qualityReason.textContent = languageMatches
+        ? safeModelText(result.quality_reason, t("qualityReasonFallback", "Screenshot quality was checked."))
+        : t("qualityReasonFallback", "Screenshot quality was checked.");
+    }
+
+    function addHistory(result, meta) {
+      state.history.unshift({
+        signal: result.signal,
+        timeframe: meta.timeframe,
+        expiration: meta.expiration_minutes,
+        timestamp: Date.now()
+      });
+      state.history = state.history.slice(0, 3);
+      renderHistory();
+    }
+
+    function renderHistory() {
+      els.historyTitle.textContent = t("historyTitle", "SESSION HISTORY");
+      els.historyNote.textContent = t("historyNote", "Last 3 analyses · no images");
+      els.historyCount.textContent = `${state.history.length} / 3`;
+      els.historyList.replaceChildren();
+      els.sessionHistory.classList.toggle("hidden", state.history.length === 0);
+      for (const item of state.history) {
+        const row = document.createElement("div");
+        row.className = `history-item ${item.signal === "UP" ? "up" : item.signal === "DOWN" ? "down" : "neutral"}`;
+        const signal = document.createElement("strong");
+        signal.className = "history-signal";
+        signal.textContent = item.signal === "UP" ? t("up", "UP") : item.signal === "DOWN" ? t("down", "DOWN") : t("noSignal", "NO SIGNAL");
+        const meta = document.createElement("span");
+        meta.className = "history-meta";
+        meta.textContent = `${item.timeframe} · ${item.expiration} ${t("minShort", "min")}`;
+        const time = document.createElement("time");
+        time.className = "history-time";
+        time.dateTime = new Date(item.timestamp).toISOString();
+        time.textContent = new Intl.DateTimeFormat(currentLocale(), { hour: "2-digit", minute: "2-digit" }).format(new Date(item.timestamp));
+        row.append(signal, meta, time);
+        els.historyList.appendChild(row);
+      }
     }
 
     function safeModelText(value, fallback) {
@@ -869,11 +1070,27 @@
       }
     }
 
-    function toast(message) {
+    function toast(message, key = null, dictionary = "ui") {
+      state.toastKey = key;
+      state.toastDictionary = dictionary || "ui";
       els.toast.textContent = message;
       els.toast.classList.add("show");
       clearTimeout(toast.t);
-      toast.t = setTimeout(() => els.toast.classList.remove("show"), 3200);
+      toast.t = setTimeout(() => {
+        els.toast.classList.remove("show");
+        state.toastKey = null;
+      }, 3200);
+    }
+
+    function showToastKey(key, fallback = "", dictionary = "ui") {
+      toast(dictionary === "access" ? at(key) : t(key, fallback), key, dictionary);
+    }
+
+    function translatedError(key, dictionary = "ui", fallback = "") {
+      const error = new Error(dictionary === "access" ? at(key) : t(key, fallback));
+      error.translationKey = key;
+      error.translationDictionary = dictionary;
+      return error;
     }
 
     function haptic(type) {
@@ -904,28 +1121,26 @@
     function readableApiError(error, reason, serverMessage) {
       if (error === "telegram_auth_failed") {
         if (reason === "expired_init_data") {
-          return t(
-            "sessionExpired",
-            "Telegram session expired. Close and reopen the Mini App."
-          );
+          return translatedError("sessionExpired", "ui", "Telegram session expired. Close and reopen the Mini App.");
         }
-        return t("telegramRequired", "Open the app inside Telegram to analyze.");
+        return translatedError("telegramRequired", "ui", "Open the app inside Telegram to analyze.");
       }
 
       if (error === "database_not_configured" || error === "database_error") {
-        return at("unavailable");
+        return translatedError("unavailable", "access");
       }
       if (error === "image_too_large") {
-        return t("imageTooLarge", "The image is too large.");
+        return translatedError("imageTooLarge", "ui", "The image is too large.");
       }
       if (error === "openai_error") {
-        return t("modelUnavailable", "The model did not respond. Try again.");
+        return translatedError("modelUnavailable", "ui", "The model did not respond. Try again.");
       }
       if (error === "missing_openai_api_key") {
-        return t("genericError", "Analysis failed.");
+        return translatedError("genericError", "ui", "Analysis failed.");
       }
 
-      return serverMessage || t("genericError", "Analysis failed.");
+      if (serverMessage) return new Error(serverMessage);
+      return translatedError("genericError", "ui", "Analysis failed.");
     }
 
     function compressImage(file, maxSide, quality) {
