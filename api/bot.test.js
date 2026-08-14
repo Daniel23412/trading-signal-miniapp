@@ -21,6 +21,7 @@ test("language selection replaces the chooser with one premium open button", asy
   const token = "123:test-token";
   process.env.BOT_TOKEN = token;
   process.env.MINIAPP_URL = "https://example.vercel.app";
+  process.env.AUTO_CONFIGURE_BOT_COMMANDS = "false";
   delete process.env.DATABASE_URL;
   const calls = [];
   global.fetch = async (url, options) => {
@@ -48,6 +49,37 @@ test("language selection replaces the chooser with one premium open button", asy
     assert.equal(edit.body.reply_markup.inline_keyboard[0].length, 1);
     assert.match(edit.body.reply_markup.inline_keyboard[0][0].text, /OPEN AI SIGNAL/);
     assert.match(edit.body.reply_markup.inline_keyboard[0][0].web_app.url, /lang=en/);
+  } finally {
+    global.fetch = oldFetch;
+    process.env = oldEnv;
+  }
+});
+
+test("first bot update synchronizes public and admin command scopes", async () => {
+  const oldFetch = global.fetch;
+  const oldEnv = { ...process.env };
+  const token = "456:test-token";
+  process.env.BOT_TOKEN = token;
+  process.env.AUTO_CONFIGURE_BOT_COMMANDS = "true";
+  process.env.ADMIN_TELEGRAM_IDS = "867371536";
+  delete process.env.POSTBACK_LOG_CHAT_ID;
+  delete process.env.DATABASE_URL;
+  const calls = [];
+  global.fetch = async (url, options) => {
+    calls.push({ method: new URL(url).pathname.split("/").pop(), body: JSON.parse(options.body) });
+    return { ok: true, status: 200, json: async () => ({ ok: true, result: true }) };
+  };
+  try {
+    const response = responseRecorder();
+    await handler({
+      method: "POST", headers: { "x-telegram-bot-api-secret-token": secret(token) },
+      body: { message: { chat: { id: 9 }, from: { id: 867371536, language_code: "en" }, text: "/language" } }
+    }, response);
+    const commandCalls = calls.filter(call => call.method === "setMyCommands");
+    assert.equal(commandCalls.length, 2);
+    assert.equal(commandCalls[0].body.commands.length, 2);
+    assert.equal(commandCalls[1].body.commands.length, 5);
+    assert.deepEqual(commandCalls[1].body.scope, { type: "chat", chat_id: "867371536" });
   } finally {
     global.fetch = oldFetch;
     process.env = oldEnv;

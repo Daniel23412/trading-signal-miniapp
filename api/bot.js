@@ -6,6 +6,7 @@ import {
 import { getBotCopy, languageKeyboard, normalizeLocale } from "../lib/locales.js";
 
 const DEFAULT_MINIAPP_URL = "https://trading-signal-miniapp-clean-vercel.vercel.app";
+let commandsPromise = null;
 
 export default async function handler(req, res) {
   const token = process.env.BOT_TOKEN;
@@ -16,6 +17,9 @@ export default async function handler(req, res) {
   if (!safeEqual(expected, received)) return res.status(403).json({ ok: false, error: "forbidden" });
 
   try {
+    if (String(process.env.AUTO_CONFIGURE_BOT_COMMANDS || "true").toLowerCase() !== "false") {
+      await ensureCommands(token).catch(error => console.warn("Telegram command setup failed", error?.message || error));
+    }
     const update = req.body || {};
     if (update.callback_query) await handleCallback(token, update.callback_query);
     else if (update.message) await handleMessage(token, update.message);
@@ -23,6 +27,38 @@ export default async function handler(req, res) {
     console.error("Telegram bot update failed", error?.message || error);
   }
   return res.status(200).json({ ok: true });
+}
+
+async function ensureCommands(token) {
+  if (!commandsPromise) {
+    commandsPromise = (async () => {
+      await tg(token, "setMyCommands", { commands: [
+        { command: "start", description: "Start / Choose language" },
+        { command: "language", description: "Change language" }
+      ] });
+      for (const chatId of commandScopeIds()) {
+        await tg(token, "setMyCommands", {
+          scope: { type: "chat", chat_id: chatId },
+          commands: [
+            { command: "start", description: "Start / Choose language" },
+            { command: "language", description: "Change language" },
+            { command: "stats", description: "All-time funnel stats" },
+            { command: "today", description: "Today funnel stats" },
+            { command: "user", description: "User status by Telegram ID" }
+          ]
+        });
+      }
+      return true;
+    })().catch(error => { commandsPromise = null; throw error; });
+  }
+  return commandsPromise;
+}
+
+function commandScopeIds() {
+  return [...new Set([
+    ...String(process.env.ADMIN_TELEGRAM_IDS || process.env.BOT_ADMIN_IDS || "").split(","),
+    process.env.POSTBACK_LOG_CHAT_ID || ""
+  ].map(value => value.trim()).filter(value => /^-?\d+$/.test(value)))];
 }
 
 async function handleMessage(token, message) {
