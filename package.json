@@ -9,7 +9,7 @@
     "set:webhook": "node scripts/set-webapp-menu.mjs"
   },
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "dependencies": {
     "pg": "^8.13.1"
