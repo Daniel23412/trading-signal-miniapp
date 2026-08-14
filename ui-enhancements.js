@@ -94,7 +94,7 @@
       switcher.setAttribute("aria-label", tr("theme"));
     }
 
-    const color = theme === "dark" ? "#080b10" : "#f3f6f9";
+    const color = theme === "dark" ? "#080b10" : "#dce5ec";
     const meta = q("#themeColorMeta");
     if (meta) meta.setAttribute("content", color);
 

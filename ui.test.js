@@ -5,6 +5,7 @@ import vm from "node:vm";
 
 const html = fs.readFileSync(new URL("./index.html", import.meta.url), "utf8");
 const app = fs.readFileSync(new URL("./app.js", import.meta.url), "utf8");
+const enhancements = fs.readFileSync(new URL("./enhancements.css", import.meta.url), "utf8");
 
 test("every app ID selector exists exactly once in the document", () => {
   const selectors = [...app.matchAll(/\$\("#([A-Za-z][\w-]*)"\)/g)].map(match => match[1]);
@@ -56,6 +57,28 @@ test("client scripts load in locale-before-app order", () => {
   assert.deepEqual(scripts.slice(-6), [
     "/launch-locale.js", "/i18n.js", "/i18n-extra.js", "/app.js", "/ui-enhancements.js", "/trading-ambience.js"
   ]);
+});
+
+test("light theme keeps text readable and trading layers visible", () => {
+  const lightVars = enhancements.match(/html\[data-theme="light"\]\{([^}]+)\}/)?.[1] || "";
+  const color = (name) => lightVars.match(new RegExp(`--${name}:(#[0-9a-f]{6})`, "i"))?.[1];
+  const luminance = (hex) => {
+    const channels = [1, 3, 5].map((index) => parseInt(hex.slice(index, index + 2), 16) / 255)
+      .map((value) => value <= .03928 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
+    return .2126 * channels[0] + .7152 * channels[1] + .0722 * channels[2];
+  };
+  const contrast = (a, b) => {
+    const values = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (values[0] + .05) / (values[1] + .05);
+  };
+  const card = "#f5f8fa";
+  assert.ok(contrast(color("text"), card) >= 7, "main text should have AAA contrast");
+  assert.ok(contrast(color("muted"), card) >= 4.5, "muted text should remain readable");
+  assert.ok(contrast(color("accent"), card) >= 4.5, "green labels should remain readable");
+  assert.match(enhancements, /body \.trading-grid\{[\s\S]*?opacity:1;[\s\S]*?background-size:128px 128px,128px 128px,32px 32px,32px 32px/);
+  assert.match(enhancements, /body \.trading-candles\{[\s\S]*?opacity:\.58/);
+  assert.match(enhancements, /body \.segmented button\.selected\{[\s\S]*?color:#fff;[\s\S]*?background:linear-gradient/);
+  assert.match(html, /enhancements\.css\?v=8/);
 });
 
 test("Vercel cron is daily and protected by the server route", () => {

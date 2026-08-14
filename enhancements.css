@@ -1,37 +1,176 @@
 /* AI SIGNAL UI v5 — theme switch, exact logo crop, smoke FX and motion */
 
 html[data-theme="light"]{
-  --bg:#f3f6f9;
-  --surface:rgba(255,255,255,.92);
-  --surface-2:#fff;
-  --border:rgba(17,24,39,.10);
-  --text:#10151c;
-  --muted:#657083;
-  --shadow:0 24px 70px rgba(25,35,50,.13)
+  --bg:#dce5ec;
+  --surface:rgba(244,248,250,.92);
+  --surface-2:#f5f8fa;
+  --border:rgba(31,54,73,.18);
+  --text:#13202d;
+  --muted:#536577;
+  --accent:#3f7d0a;
+  --accent-2:#326507;
+  --red:#c43c50;
+  --amber:#7a5a0a;
+  --shadow:0 20px 55px rgba(32,51,68,.17);
+  color-scheme:light
 }
-html[data-theme="light"],html[data-theme="light"] body{background:#f3f6f9;color:#10151c}
+html[data-theme="light"],html[data-theme="light"] body{background:#dce5ec;color:var(--text)}
 html[data-theme="light"] body{
   background:
-    radial-gradient(circle at 76% 6%,rgba(183,255,54,.13),transparent 27rem),
-    radial-gradient(circle at 3% 45%,rgba(53,104,255,.07),transparent 28rem),
-    linear-gradient(180deg,#f8fafc 0%,#edf2f6 100%)
+    radial-gradient(circle at 78% 4%,rgba(95,145,42,.09),transparent 25rem),
+    radial-gradient(circle at 2% 42%,rgba(45,104,145,.09),transparent 27rem),
+    linear-gradient(180deg,#e8eef2 0%,#d9e3ea 100%);
+  background-attachment:fixed
 }
 html[data-theme="light"] .panel,
 html[data-theme="light"] .result-card{
-  background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(245,248,251,.98));
-  border-color:rgba(17,24,39,.10)
+  background:linear-gradient(180deg,rgba(249,251,252,.94),rgba(235,242,246,.93));
+  border-color:var(--border);
+  box-shadow:0 16px 42px rgba(31,50,67,.13),inset 0 1px 0 rgba(255,255,255,.82)
 }
 html[data-theme="light"] .segmented button{
-  background:rgba(17,24,39,.035);
-  border-color:rgba(17,24,39,.08);
-  color:#657083
+  background:rgba(255,255,255,.52);
+  border-color:rgba(31,54,73,.16);
+  color:#475a6b
 }
 html[data-theme="light"] .result-info>div,
 html[data-theme="light"] .reason-box{
-  background:rgba(17,24,39,.025);
-  border-color:rgba(17,24,39,.08)
+  background:rgba(255,255,255,.50);
+  border-color:rgba(31,54,73,.15)
 }
-html[data-theme="light"] .reason-box p{color:#3f4a59}
+html[data-theme="light"] .reason-box p{color:#344758}
+
+/* Calm terminal-style light theme: readable grid, candles and cards. */
+html[data-theme="light"] body .trading-bg{
+  background:
+    radial-gradient(circle at 82% 7%,rgba(86,135,36,.08),transparent 22rem),
+    radial-gradient(circle at 8% 40%,rgba(34,96,139,.09),transparent 27rem),
+    linear-gradient(180deg,rgba(226,234,240,.18),rgba(178,194,205,.42))
+}
+html[data-theme="light"] body .trading-grid{
+  opacity:1;
+  background-image:
+    linear-gradient(rgba(32,57,76,.13) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(32,57,76,.13) 1px,transparent 1px),
+    linear-gradient(rgba(32,57,76,.055) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(32,57,76,.055) 1px,transparent 1px);
+  background-size:128px 128px,128px 128px,32px 32px,32px 32px;
+  mask-image:linear-gradient(180deg,rgba(0,0,0,.98) 0%,rgba(0,0,0,.88) 72%,transparent 100%);
+  -webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,.98) 0%,rgba(0,0,0,.88) 72%,transparent 100%)
+}
+html[data-theme="light"] body .trading-glow{opacity:.10;filter:blur(58px)}
+html[data-theme="light"] body .trading-glow.a{background:rgba(71,123,24,.34)}
+html[data-theme="light"] body .trading-glow.b{background:rgba(27,92,137,.30)}
+html[data-theme="light"] body .trading-candles{
+  opacity:.58;
+  filter:drop-shadow(0 3px 6px rgba(25,43,57,.20))
+}
+html[data-theme="light"] body .trading-candle.up{
+  color:#3f7d0a;
+  background:linear-gradient(180deg,rgba(90,151,25,.92),rgba(54,112,10,.72))
+}
+html[data-theme="light"] body .trading-candle.down{
+  color:#b9364a;
+  background:linear-gradient(180deg,rgba(205,68,86,.90),rgba(158,40,58,.72))
+}
+html[data-theme="light"] body .access-card,
+html[data-theme="light"] body .success-card{
+  background:linear-gradient(180deg,rgba(249,251,252,.96),rgba(232,240,244,.95));
+  border-color:var(--border);
+  box-shadow:0 18px 50px rgba(31,50,67,.15),inset 0 1px 0 rgba(255,255,255,.86)
+}
+html[data-theme="light"] body .access-card::before,
+html[data-theme="light"] body .result-card::before,
+html[data-theme="light"] body .success-aura{opacity:.075}
+html[data-theme="light"] body .access-summary{
+  background:linear-gradient(135deg,rgba(246,250,251,.94),rgba(226,236,241,.91));
+  border-color:rgba(48,82,103,.20)
+}
+html[data-theme="light"] body .access-summary-grid>div,
+html[data-theme="light"] body .access-step,
+html[data-theme="light"] body .history-item,
+html[data-theme="light"] body .quality-box,
+html[data-theme="light"] body .quality-grid>div{
+  background:rgba(255,255,255,.48);
+  border-color:rgba(31,54,73,.15)
+}
+html[data-theme="light"] body .upload-box{
+  background:rgba(255,255,255,.44);
+  border-color:rgba(63,125,10,.38)
+}
+html[data-theme="light"] body .upload-box:hover,
+html[data-theme="light"] body .upload-box.dragging{
+  background:rgba(239,247,232,.72);
+  border-color:rgba(63,125,10,.66)
+}
+html[data-theme="light"] body .upload-icon{
+  background:rgba(63,125,10,.075);
+  border-color:rgba(63,125,10,.30)
+}
+html[data-theme="light"] body .segmented button.selected{
+  color:#fff;
+  background:linear-gradient(180deg,#4c8911,#3f7d0a);
+  border-color:#3f7d0a;
+  box-shadow:0 7px 20px rgba(52,101,8,.20)
+}
+html[data-theme="light"] body .access-step.done .access-step-dot{
+  color:#fff;
+  background:#3f7d0a;
+  border-color:#3f7d0a;
+  box-shadow:0 7px 18px rgba(52,101,8,.18)
+}
+html[data-theme="light"] body .eyebrow{color:#526678}
+html[data-theme="light"] body .risk-note{color:#526273}
+html[data-theme="light"] body .secondary-btn,
+html[data-theme="light"] body .theme-switch,
+html[data-theme="light"] body .lang-toggle{
+  background:rgba(247,250,251,.82);
+  border-color:rgba(31,54,73,.18);
+  box-shadow:0 8px 22px rgba(31,50,67,.11),inset 0 1px 0 rgba(255,255,255,.88)
+}
+html[data-theme="light"] body .theme-knob{
+  background:linear-gradient(145deg,#8fbe3c,#659b1c);
+  box-shadow:0 5px 15px rgba(65,112,14,.24),inset 0 1px 0 rgba(255,255,255,.38)
+}
+html[data-theme="light"] body .theme-sun{color:#fff}
+html[data-theme="light"] body .lang-option:hover{
+  background:rgba(63,125,10,.07);
+  border-color:rgba(63,125,10,.16)
+}
+html[data-theme="light"] body .primary-btn{
+  background:linear-gradient(180deg,#5f9518,#4f8110);
+  color:#fff;
+  box-shadow:0 14px 34px rgba(57,103,12,.24)
+}
+html[data-theme="light"] body .primary-btn:not(:disabled):hover{
+  box-shadow:0 17px 40px rgba(57,103,12,.30)
+}
+html[data-theme="light"] body .success-check{
+  color:#fff;
+  background:linear-gradient(145deg,#6ca91e,#3f7d0a);
+  box-shadow:0 0 0 9px rgba(63,125,10,.055),0 12px 30px rgba(52,101,8,.20)
+}
+html[data-theme="light"] body .success-proof>div{
+  background:rgba(63,125,10,.055);
+  border-color:rgba(63,125,10,.20)
+}
+html[data-theme="light"] body .demo-market-card{
+  background:linear-gradient(180deg,rgba(248,251,252,.94),rgba(228,237,242,.94));
+  border-color:rgba(31,54,73,.18);
+  box-shadow:0 12px 30px rgba(31,50,67,.13),inset 0 1px 0 rgba(255,255,255,.82)
+}
+html[data-theme="light"] body .demo-market-line{
+  background:linear-gradient(90deg,rgba(31,54,73,.10) 1px,transparent 1px);
+  background-size:18px 100%
+}
+html[data-theme="light"] body .demo-market-ticker{
+  background:rgba(235,242,246,.82);
+  border-color:rgba(31,54,73,.18)
+}
+html[data-theme="light"] body .demo-market-pill{
+  background:rgba(255,255,255,.50);
+  border-color:rgba(31,54,73,.15)
+}
 
 /* exact cropped version of the generated AI SIGNAL logo */
 .brand-logo{
