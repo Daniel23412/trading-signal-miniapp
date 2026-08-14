@@ -1,1 +1,17 @@
-{"name":"trading-signal-telegram-miniapp","version":"1.0.0","private":true,"type":"module","scripts":{"dev":"npx vercel dev","test":"node --test","set:webhook":"node scripts/set-webapp-menu.mjs"},"engines":{"node":">=20"},"dependencies":{"pg":"^8.13.1"}}
+{
+  "name": "trading-signal-telegram-miniapp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx vercel dev",
+    "test": "node --test",
+    "set:webhook": "node scripts/set-webapp-menu.mjs"
+  },
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
+}

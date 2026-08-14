@@ -54,6 +54,13 @@ OPENAI_MODEL=gpt-5.6-luna
 MIN_CONFIDENCE=72
 REQUIRE_TELEGRAM_AUTH=true
 TELEGRAM_AUTH_MAX_AGE_SECONDS=86400
+REQUIRE_DEPOSIT_ACCESS=true
+MIN_DEPOSIT_AMOUNT=5
+DATABASE_URL=postgresql://...
+POSTBACK_SECRET=replace-with-a-long-random-secret
+INSTALL_SECRET=replace-with-a-different-long-random-secret
+AFFILIATE_REF_URL=https://lkus.cc/f6f3ab
+MINIAPP_URL=https://trading-signal-miniapp-clean-vercel.vercel.app
 ```
 
 После деплоя получишь адрес вида:
@@ -77,6 +84,15 @@ node scripts/set-webapp-menu.mjs
 ```
 
 После этого в чате с ботом появится кнопка, открывающая приложение.
+
+В production также есть защищённый одноразовый установщик webhook. Он работает только с
+`INSTALL_SECRET` (или с `POSTBACK_SECRET`, если отдельный секрет не задан):
+
+```text
+https://your-project.vercel.app/api/install-bot?secret=YOUR_INSTALL_SECRET
+```
+
+Не публикуй эту ссылку и не передавай секрет пользователям.
 
 ## Локальный тест
 

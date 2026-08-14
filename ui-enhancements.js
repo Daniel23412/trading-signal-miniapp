@@ -41,7 +41,7 @@
   }
 
   function flagUrl(country) {
-    return `https://flagcdn.com/w80/${country}.png`;
+    return `/flags/${country}.svg`;
   }
 
   function setText(node, value) {
@@ -53,17 +53,17 @@
       if (tg && tg.HapticFeedback) {
         if (type === "selection" && tg.HapticFeedback.selectionChanged) tg.HapticFeedback.selectionChanged();
         else if (tg.HapticFeedback.impactOccurred) tg.HapticFeedback.impactOccurred("light");
-      } else if (navigator.vibrate) navigator.vibrate(7);
+      } else if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.isActive)) {
+        navigator.vibrate(7);
+      }
     } catch {}
   }
 
   function syncTelegramSafeArea() {
     const root = document.documentElement;
-    const shell = q(".app-shell");
     if (!tg) {
       root.dataset.telegram = "0";
       root.style.setProperty("--tg-app-content-top", "0px");
-      if (shell) shell.style.paddingTop = "";
       return;
     }
 
@@ -74,7 +74,6 @@
 
     if (!isTelegram) {
       root.style.setProperty("--tg-app-content-top", "0px");
-      if (shell) shell.style.paddingTop = "";
       return;
     }
 
@@ -83,7 +82,6 @@
     const fallbackTop = platform === "ios" ? 104 : platform === "android" ? 72 : 64;
     const top = Math.max(contentTop, safeTop, fallbackTop);
     root.style.setProperty("--tg-app-content-top", `${Math.round(top)}px`);
-    if (shell) shell.style.paddingTop = `${Math.round(top + 14)}px`;
   }
 
   function setTheme(value, save = true) {
@@ -193,6 +191,8 @@
     toggle.className = "lang-toggle";
     toggle.type = "button";
     toggle.setAttribute("aria-haspopup", "menu");
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-label", "Language");
     toggle.innerHTML = `<img class="flag-img" alt=""><span class="lang-code"></span><span class="chevron">⌄</span>`;
 
     const menu = document.createElement("div");
@@ -213,8 +213,8 @@
       const button = document.createElement("button");
       button.type = "button";
       button.className = "lang-option";
-      button.setAttribute("role", "menuitem");
-      button.innerHTML = `<img class="flag-img" src="${flagUrl(country)}" alt="${country.toUpperCase()}"><b>${country.toUpperCase()}</b><small>${label}</small>`;
+      button.setAttribute("role", "menuitemradio");
+      button.innerHTML = `<img class="flag-img" loading="lazy" src="${flagUrl(country)}" alt="${country.toUpperCase()}"><b>${country.toUpperCase()}</b><small>${label}</small>`;
       button.addEventListener("click", (event) => {
         event.stopPropagation();
         localStorage.setItem("ai_signal_locale", language);
@@ -222,6 +222,10 @@
         paint();
         translateStatic();
         menu.classList.add("hidden");
+        toggle.setAttribute("aria-expanded", "false");
+        window.dispatchEvent(new CustomEvent("ai-signal:locale-change", {
+          detail: { locale: language, country }
+        }));
         haptic("selection");
       });
       menu.appendChild(button);
@@ -230,10 +234,20 @@
     toggle.addEventListener("click", (event) => {
       event.stopPropagation();
       menu.classList.toggle("hidden");
+      toggle.setAttribute("aria-expanded", menu.classList.contains("hidden") ? "false" : "true");
       haptic();
     });
 
-    document.addEventListener("click", () => menu.classList.add("hidden"));
+    document.addEventListener("click", () => {
+      menu.classList.add("hidden");
+      toggle.setAttribute("aria-expanded", "false");
+    });
+    toggle.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      menu.classList.add("hidden");
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.focus();
+    });
     menu.addEventListener("click", (event) => event.stopPropagation());
 
     wrap.append(toggle, menu);

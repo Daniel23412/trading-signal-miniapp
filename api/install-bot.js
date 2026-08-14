@@ -3,9 +3,14 @@ import crypto from "node:crypto";
 const DEFAULT_BASE = "https://trading-signal-miniapp-clean-vercel.vercel.app";
 
 export default async function handler(req,res){
+  res.setHeader("Cache-Control","no-store");
   if(req.method !== "GET") return res.status(405).json({ok:false,error:"method_not_allowed"});
   const token = process.env.BOT_TOKEN;
   if(!token) return res.status(503).json({ok:false,error:"bot_not_configured"});
+  const installSecret = String(process.env.INSTALL_SECRET || process.env.POSTBACK_SECRET || "");
+  if(!installSecret) return res.status(503).json({ok:false,error:"install_not_configured"});
+  const receivedSecret = String(req.query?.secret || req.headers?.["x-install-secret"] || "");
+  if(!safeEqual(installSecret,receivedSecret)) return res.status(403).json({ok:false,error:"forbidden"});
 
   const base = process.env.MINIAPP_URL || DEFAULT_BASE;
   const webhookUrl = new URL("/api/bot",base).toString();
@@ -41,4 +46,9 @@ async function telegram(token,method,payload){
   const data = await response.json().catch(()=>null);
   if(!response.ok || !data?.ok) throw new Error(`telegram_${method}_${response.status}`);
   return data.result;
+}
+
+function safeEqual(a,b){
+  const left=Buffer.from(String(a)),right=Buffer.from(String(b));
+  return left.length === right.length && crypto.timingSafeEqual(left,right);
 }

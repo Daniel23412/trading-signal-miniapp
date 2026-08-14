@@ -20,6 +20,7 @@
       timeframe: "M5",
       expiration: "3",
       access: null,
+      accessMode: "",
       accessChecking: false,
       referralUrl: null
     };
@@ -318,6 +319,7 @@
     const $ = (s) => document.querySelector(s);
     const els = {
       screenAccess: $("#screenAccess"),
+      screenLoading: $("#screenLoading"),
       accessTitle: $("#accessTitle"),
       accessDesc: $("#accessDesc"),
       accessRegStep: $("#accessRegStep"),
@@ -406,6 +408,13 @@
     });
     els.registerBtn.addEventListener("click", openReferral);
     els.checkAccessBtn.addEventListener("click", () => checkAccess(true));
+    window.addEventListener("ai-signal:locale-change", () => {
+      paintAccess(state.access, state.accessMode);
+      if (els.screenLoading.classList.contains("active")) {
+        const messages = t("loadingMessages", []);
+        if (Array.isArray(messages) && messages[0]) els.loadingText.textContent = messages[0];
+      }
+    });
 
     document.querySelectorAll(".segmented").forEach((group) => {
       group.addEventListener("click", (event) => {
@@ -443,18 +452,43 @@
     });
 
     window.addEventListener("focus", () => {
-      if (els.screenAccess.classList.contains("active")) {
+      if (canPollAccess() && els.screenAccess.classList.contains("active")) {
         setTimeout(() => checkAccess(false), 450);
       }
     });
 
-    let accessPoll = setInterval(() => {
-      if (els.screenAccess.classList.contains("active") && !state.accessChecking) {
-        checkAccess(false);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        startAccessPolling();
+        if (canPollAccess() && els.screenAccess.classList.contains("active")) checkAccess(false);
+      } else {
+        stopAccessPolling();
       }
-    }, 5000);
+    });
+
+    let accessPoll = null;
+
+    function canPollAccess() {
+      return Boolean(tg && tg.initData) && document.visibilityState !== "hidden";
+    }
+
+    function startAccessPolling() {
+      if (accessPoll || !canPollAccess() || state.access?.allowed) return;
+      accessPoll = setInterval(() => {
+        if (els.screenAccess.classList.contains("active") && !state.accessChecking) {
+          checkAccess(false);
+        }
+      }, 5000);
+    }
+
+    function stopAccessPolling() {
+      if (!accessPoll) return;
+      clearInterval(accessPoll);
+      accessPoll = null;
+    }
 
     paintAccess(null);
+    startAccessPolling();
     checkAccess(false);
 
     async function checkAccess(userInitiated = false) {
@@ -482,6 +516,7 @@
 
         if (response.status === 401) {
           state.access = null;
+          stopAccessPolling();
           paintAccess(null, "telegram");
           showScreen("screenAccess");
           return;
@@ -498,12 +533,12 @@
         paintAccess(data.access);
 
         if (data.access.allowed) {
-          clearInterval(accessPoll);
-          accessPoll = null;
+          stopAccessPolling();
           if (userInitiated) toast(at("granted"));
           haptic("success");
           showScreen("screenInput");
         } else {
+          startAccessPolling();
           showScreen("screenAccess");
         }
       } catch (error) {
@@ -512,12 +547,13 @@
         showScreen("screenAccess");
       } finally {
         state.accessChecking = false;
-        els.checkAccessBtn.disabled = false;
+        els.checkAccessBtn.disabled = state.accessMode === "telegram";
         els.checkAccessBtn.textContent = at("check");
       }
     }
 
     function paintAccess(access, mode = "") {
+      state.accessMode = mode;
       const min = Number(access?.min_deposit || 5);
       const minText = "$" + formatMoney(min);
 
@@ -718,13 +754,7 @@
           state.access = data.access || null;
           paintAccess(state.access);
           showScreen("screenAccess");
-          if (!accessPoll) {
-            accessPoll = setInterval(() => {
-              if (els.screenAccess.classList.contains("active") && !state.accessChecking) {
-                checkAccess(false);
-              }
-            }, 5000);
-          }
+          startAccessPolling();
           return;
         }
 
@@ -790,14 +820,39 @@
         })
       );
 
-      els.trendText.textContent = result.trend || "—";
+      const trendFallback = result.signal === "UP"
+        ? t("up", "UP")
+        : result.signal === "DOWN"
+        ? t("down", "DOWN")
+        : t("noSignal", "NO SIGNAL");
+      const reasonFallback = result.signal === "NO_SIGNAL"
+        ? t("skipSetup", "Better to skip this setup")
+        : t("directionShown", "Direction is visible on the current screenshot");
+      els.trendText.textContent = safeModelText(result.trend, trendFallback);
       els.paramsText.textContent =
         meta.timeframe +
         " · " +
         meta.expiration_minutes +
         " " +
         t("minShort", "min");
-      els.reasonText.textContent = result.reason || "—";
+      els.reasonText.textContent = safeModelText(result.reason, reasonFallback);
+    }
+
+    function safeModelText(value, fallback) {
+      const text = String(value || "").trim();
+      if (!text) return fallback;
+
+      const locale = currentLocale();
+      if (!["ru", "uk"].includes(locale) && /[\u0400-\u052f]/u.test(text)) return fallback;
+
+      const requiredScript = {
+        ja: /[\u3040-\u30ff\u3400-\u9fff]/u,
+        zh: /[\u3400-\u9fff]/u,
+        ko: /[\uac00-\ud7af]/u,
+        hi: /[\u0900-\u097f]/u
+      }[locale];
+      if (requiredScript && !requiredScript.test(text)) return fallback;
+      return text;
     }
 
     function showScreen(id) {
@@ -838,7 +893,7 @@
           return;
         }
 
-        if (navigator.vibrate) {
+        if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.isActive)) {
           navigator.vibrate(type === "success" ? 14 : type === "error" ? [18, 30, 18] : 7);
         }
       } catch {}

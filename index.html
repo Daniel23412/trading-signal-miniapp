@@ -6,11 +6,12 @@
   <meta id="themeColorMeta" name="theme-color" content="#080b10">
   <title>AI Trading Signal</title>
   <link rel="stylesheet" href="/styles.css?v=6">
-  <link rel="stylesheet" href="/enhancements.css?v=5">
+  <link rel="stylesheet" href="/enhancements.css?v=6">
   <style>
     .app-shell{
       padding-top:calc(
         16px + max(
+          var(--tg-app-content-top, 0px),
           var(--tg-content-safe-area-inset-top, 0px),
           var(--tg-safe-area-inset-top, 0px),
           env(safe-area-inset-top, 0px)
@@ -18,7 +19,16 @@
       )!important;
     }
     @media (max-width:600px){
-      .app-shell{padding-top:118px!important}
+      .app-shell{
+        padding-top:calc(
+          18px + max(
+            var(--tg-app-content-top, 0px),
+            var(--tg-content-safe-area-inset-top, 0px),
+            var(--tg-safe-area-inset-top, 0px),
+            env(safe-area-inset-top, 0px)
+          )
+        )!important
+      }
       .topbar{margin-bottom:24px}
     }
 
@@ -275,8 +285,8 @@
 </main>
 <script src="/launch-locale.js?v=1" defer></script>
 <script src="/i18n.js?v=1" defer></script>
-<script src="/app.js?v=5" defer></script>
-<script src="/ui-enhancements.js?v=9" defer></script>
+<script src="/app.js?v=6" defer></script>
+<script src="/ui-enhancements.js?v=10" defer></script>
 <script src="/trading-ambience.js?v=3" defer></script>
 </body>
 </html>
