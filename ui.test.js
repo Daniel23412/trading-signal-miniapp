@@ -78,7 +78,19 @@ test("light theme keeps text readable and trading layers visible", () => {
   assert.match(enhancements, /body \.trading-grid\{[\s\S]*?opacity:1;[\s\S]*?background-size:128px 128px,128px 128px,32px 32px,32px 32px/);
   assert.match(enhancements, /body \.trading-candles\{[\s\S]*?opacity:\.58/);
   assert.match(enhancements, /body \.segmented button\.selected\{[\s\S]*?color:#fff;[\s\S]*?background:linear-gradient/);
-  assert.match(html, /enhancements\.css\?v=8/);
+  assert.match(html, /enhancements\.css\?v=9/);
+});
+
+test("result emphasizes localized AI confidence and a plain explanation", () => {
+  assert.match(html, /id="confidenceLabel"/);
+  assert.match(html, /id="confidenceHint"/);
+  assert.match(html, /id="confidenceLevel"/);
+  assert.match(html, /id="reasonLabel"/);
+  assert.match(html, /i18n-extra\.js\?v=2/);
+  assert.match(html, /app\.js\?v=9/);
+  assert.match(html, /ui-enhancements\.js\?v=14/);
+  assert.match(enhancements, /\.confidence-row \.confidence-score strong\{[^}]*font-size:31px/);
+  assert.match(enhancements, /\.reason-box p\{[^}]*font-size:13px;[^}]*line-height:1\.62/);
 });
 
 test("Vercel cron is daily and protected by the server route", () => {

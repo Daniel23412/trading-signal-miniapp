@@ -436,3 +436,34 @@ html[data-depth="active"] .panel,html[data-depth="active"] .access-card,html[dat
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }
+
+/* More useful result: prominent AI confidence and plain-language explanation. */
+.result-title{font-size:44px;line-height:.96}
+.asset-arrow{width:118px!important;height:118px!important}
+.signal-confidence{
+  gap:16px;margin-top:24px;padding:14px 15px;
+  border:1px solid var(--border);border-radius:17px;
+  background:rgba(255,255,255,.028);text-align:left
+}
+.confidence-copy{min-width:0;flex:1}
+.confidence-copy span{display:block;color:var(--text);font-size:10px;font-weight:950;letter-spacing:.105em}
+.confidence-copy small{display:block;margin-top:5px;color:var(--muted);font-size:9px;line-height:1.35}
+.confidence-score{flex:0 0 auto;text-align:right}
+.confidence-row .confidence-score strong{display:block;color:var(--text);font-size:31px;line-height:.9;letter-spacing:-.045em;font-variant-numeric:tabular-nums}
+.confidence-score small{display:inline-block;margin-top:8px;padding:4px 7px;border-radius:99px;border:1px solid var(--border);font-size:7px;font-weight:950;letter-spacing:.08em}
+.confidence-score small.cautious{color:var(--amber);background:rgba(245,189,75,.07);border-color:rgba(245,189,75,.18)}
+.confidence-score small.medium,.confidence-score small.strong{color:var(--accent);background:rgba(183,255,54,.055);border-color:rgba(183,255,54,.16)}
+.confidence-score small.unavailable{color:var(--muted)}
+.confidence-track{height:7px;margin-top:10px}
+.reason-box{padding:14px;margin-top:10px}
+.reason-box p{font-size:13px;line-height:1.62;margin-top:8px}
+html[data-theme="light"] body .signal-confidence{background:rgba(255,255,255,.52);border-color:rgba(31,54,73,.16)}
+html[data-theme="light"] body .confidence-score small.medium,
+html[data-theme="light"] body .confidence-score small.strong{color:var(--accent-2);background:rgba(63,125,10,.06);border-color:rgba(63,125,10,.18)}
+html[data-theme="light"] body .confidence-score small.cautious{color:#755208;background:rgba(122,90,10,.06);border-color:rgba(122,90,10,.18)}
+@media(max-width:430px){
+  .result-title{font-size:42px}
+  .asset-arrow{width:112px!important;height:112px!important}
+  .signal-confidence{padding:13px}
+  .confidence-row .confidence-score strong{font-size:29px}
+}

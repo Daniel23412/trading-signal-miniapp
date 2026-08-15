@@ -6,7 +6,7 @@
   <meta id="themeColorMeta" name="theme-color" content="#080b10">
   <title>AI Trading Signal</title>
   <link rel="stylesheet" href="/styles.css?v=7">
-  <link rel="stylesheet" href="/enhancements.css?v=8">
+  <link rel="stylesheet" href="/enhancements.css?v=9">
   <style>
     .app-shell{
       padding-top:calc(
@@ -305,13 +305,22 @@
       <div id="resultIcon" class="result-icon">•</div>
       <div id="resultTitle" class="result-title">НЕТ СИГНАЛА</div>
       <div id="resultSub" class="result-sub">Сетап недостаточно выражен</div>
-      <div class="confidence-row"><span>Уверенность анализа</span><strong id="confidenceText">0%</strong></div>
+      <div class="confidence-row signal-confidence">
+        <div class="confidence-copy">
+          <span id="confidenceLabel">УВЕРЕННОСТЬ AI</span>
+          <small id="confidenceHint">Сила направления на этом скриншоте</small>
+        </div>
+        <div class="confidence-score">
+          <strong id="confidenceText">0%</strong>
+          <small id="confidenceLevel">—</small>
+        </div>
+      </div>
       <div class="confidence-track"><span id="confidenceBar"></span></div>
       <div class="result-info">
         <div><span>Тренд</span><strong id="trendText">—</strong></div>
         <div><span>Параметры</span><strong id="paramsText">M5 · 3 мин</strong></div>
       </div>
-      <div class="reason-box"><span>Почему</span><p id="reasonText">—</p></div>
+      <div class="reason-box"><span id="reasonLabel">ПРОСТОЕ ОБЪЯСНЕНИЕ</span><p id="reasonText">—</p></div>
       <div class="quality-box">
         <div class="quality-head"><span id="qualityTitle">ПРОВЕРКА СКРИНШОТА</span><small id="qualityState">—</small></div>
         <div class="quality-grid">
@@ -330,9 +339,9 @@
 </main>
 <script src="/launch-locale.js?v=2" defer></script>
 <script src="/i18n.js?v=1" defer></script>
-<script src="/i18n-extra.js?v=1" defer></script>
-<script src="/app.js?v=8" defer></script>
-<script src="/ui-enhancements.js?v=13" defer></script>
+<script src="/i18n-extra.js?v=2" defer></script>
+<script src="/app.js?v=9" defer></script>
+<script src="/ui-enhancements.js?v=14" defer></script>
 <script src="/trading-ambience.js?v=4" defer></script>
 </body>
 </html>

@@ -372,10 +372,14 @@
       resultIcon: $("#resultIcon"),
       resultTitle: $("#resultTitle"),
       resultSub: $("#resultSub"),
+      confidenceLabel: $("#confidenceLabel"),
+      confidenceHint: $("#confidenceHint"),
       confidenceText: $("#confidenceText"),
+      confidenceLevel: $("#confidenceLevel"),
       confidenceBar: $("#confidenceBar"),
       trendText: $("#trendText"),
       paramsText: $("#paramsText"),
+      reasonLabel: $("#reasonLabel"),
       reasonText: $("#reasonText"),
       qualityTitle: $("#qualityTitle"),
       qualityState: $("#qualityState"),
@@ -956,6 +960,23 @@
       }
 
       els.confidenceText.textContent = String(result.confidence) + "%";
+      els.confidenceLabel.textContent = t("confidenceLabel", "AI CONFIDENCE");
+      els.confidenceHint.textContent = t("confidenceHint", "Direction strength from this screenshot");
+      const confidenceLevelKey = result.signal === "NO_SIGNAL"
+        ? "noSignal"
+        : result.confidence < 60
+        ? "signalWeak"
+        : result.confidence < 75
+        ? "signalMedium"
+        : "signalStrong";
+      els.confidenceLevel.textContent = t(confidenceLevelKey, confidenceLevelKey);
+      els.confidenceLevel.className = result.signal === "NO_SIGNAL"
+        ? "unavailable"
+        : result.confidence < 60
+        ? "cautious"
+        : result.confidence < 75
+        ? "medium"
+        : "strong";
       if (animate) {
         els.confidenceBar.style.width = "0%";
         requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -970,7 +991,7 @@
         : t("noSignal", "NO SIGNAL");
       const reasonFallback = result.signal === "NO_SIGNAL"
         ? t("skipSetup", "Better to skip this setup")
-        : t("directionShown", "Direction is visible on the current screenshot");
+        : t("directionExplanationFallback", "The latest visible candles lean more strongly in this direction. The percentage is AI confidence for this screenshot only.");
       const resultLanguageMatches = !meta.locale || meta.locale === currentLocale();
       els.trendText.textContent = resultLanguageMatches ? safeModelText(result.trend, trendFallback) : trendFallback;
       els.paramsText.textContent =
@@ -979,6 +1000,7 @@
         meta.expiration_minutes +
         " " +
         t("minShort", "min");
+      els.reasonLabel.textContent = t("reasonLabel", "SIMPLE EXPLANATION");
       els.reasonText.textContent = resultLanguageMatches ? safeModelText(result.reason, reasonFallback) : reasonFallback;
       renderQuality(result, resultLanguageMatches);
     }

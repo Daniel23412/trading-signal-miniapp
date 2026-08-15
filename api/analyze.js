@@ -150,7 +150,6 @@ async function handleAnalysis(req, res) {
   if (image.length > MAX_DATA_URL_LENGTH) return res.status(413).json({ error: "image_too_large" });
 
   const model = process.env.OPENAI_MODEL || "gpt-5.6-luna";
-  const minConfidence = clamp(Number(process.env.MIN_CONFIDENCE || 72), 50, 95);
   const schema = {
     type: "object",
     properties: {
@@ -159,23 +158,24 @@ async function handleAnalysis(req, res) {
       chart_type: { type: "string", enum: ["candlestick", "line", "other", "none"] },
       quality_ok: { type: "boolean" }, quality_reason: { type: "string" },
       signal: { type: "string", enum: ["UP", "DOWN", "NO_SIGNAL"] },
+      direction_bias: { type: "string", enum: ["UP", "DOWN", "NONE"] },
       confidence: { type: "integer", minimum: 0, maximum: 100 },
       chart_quality: { type: "string", enum: ["good", "medium", "poor"] },
       trend: { type: "string" }, reason: { type: "string" }, invalid_chart: { type: "boolean" }
     },
-    required: ["has_candles", "timeframe_readable", "screenshot_readability", "chart_type", "quality_ok", "quality_reason", "signal", "confidence", "chart_quality", "trend", "reason", "invalid_chart"],
+    required: ["has_candles", "timeframe_readable", "screenshot_readability", "chart_type", "quality_ok", "quality_reason", "signal", "direction_bias", "confidence", "chart_quality", "trend", "reason", "invalid_chart"],
     additionalProperties: false
   };
 
-  const prompt = `Analyze ONLY what is actually visible in the attached image.\n\nUser parameters:\n- selected timeframe: ${timeframe}\n- intended trade duration: ${expiration} minutes\n- response language: ${language.native} (${language.name})\n\nPerform two stages in order.\n\nSTAGE A — visual quality gate:\n1. Decide whether this is a readable trading chart.\n2. Confirm whether actual candlesticks are visible (not merely a line chart, logo, form, balance page, or decorative graph).\n3. Decide whether the timeframe label is readable. The user's selected timeframe is context only; never claim it is visible unless it truly is.\n4. Set screenshot_readability, chart_type, chart_quality, quality_ok, quality_reason, and invalid_chart.\n5. quality_ok must be false for unreadable, critically cropped, non-chart, or candle-free images.\n\nSTAGE B — direction, only if Stage A passes:\nAssess the nearest visual direction from visible candles, price structure, highs/lows, local levels, and genuinely visible indicators. If quality_ok=false or the setup is ambiguous, signal must be NO_SIGNAL.\n\nRules:\n- Never invent the asset, price, indicator, level, timeframe, or market context.\n- confidence is analysis confidence, not win probability and not a guarantee.\n- UP/DOWN requires a clearly expressed visual direction.\n- trend, reason, and quality_reason must be short, natural, and written ONLY in ${language.native}.\n- reason must contain no more than 2 short sentences.\n- Do not mix human languages. Technical enum values remain English.\n- No promise of profit and no guarantee.`;
+  const prompt = `Analyze ONLY what is actually visible in the attached image.\n\nUser parameters:\n- selected timeframe: ${timeframe}\n- intended trade duration: ${expiration} minutes\n- response language: ${language.native} (${language.name})\n\nPerform two stages in order.\n\nSTAGE A — visual quality gate:\n1. Decide whether this is a readable trading chart.\n2. Confirm whether actual candlesticks are visible (not merely a line chart, logo, form, balance page, or decorative graph).\n3. Decide whether the timeframe label is readable. The user's selected timeframe is context only; never claim it is visible unless it truly is.\n4. Set screenshot_readability, chart_type, chart_quality, quality_ok, quality_reason, and invalid_chart.\n5. A readable candlestick chart may pass even when the timeframe label is not visible or the chart quality is only medium.\n6. quality_ok must be false only for unreadable, critically cropped, non-chart, or candle-free images.\n\nSTAGE B — choose the closest visible direction whenever Stage A passes:\n1. Compare the latest visible candles, local highs and lows, momentum, nearby levels, and only indicators that are genuinely visible.\n2. Set direction_bias to the closest visible direction: UP or DOWN.\n3. For every quality_ok=true candlestick chart, signal MUST be UP or DOWN and MUST match direction_bias. Do not return NO_SIGNAL merely because movement is weak, sideways, or not perfect; show that uncertainty through a lower confidence value.\n4. Use NO_SIGNAL and direction_bias=NONE only when Stage A fails.\n\nConfidence scale:\n- 50–59: a cautious direction; visible evidence is weak or mixed.\n- 60–74: a usable direction with more supporting evidence.\n- 75–90: a clearly expressed direction.\n- 0–49: only for an invalid or unreadable image that returns NO_SIGNAL.\nconfidence is AI analysis confidence based on this screenshot, not historical accuracy, win probability, or a guarantee.\n\nWriting rules:\n- Never invent the asset, price, indicator, level, timeframe, or market context.\n- trend must be one simple phrase.\n- reason must use 2 or 3 short, plain-language sentences: state the direction, mention the visible evidence, and briefly explain why the confidence is not higher when evidence is mixed.\n- trend, reason, and quality_reason must be natural and written ONLY in ${language.native}.\n- Do not mix human languages. Technical enum values remain English.\n- No promise of profit and no guarantee.`;
 
   const openaiRes = await fetch("https://api.openai.com/v1/responses", {
     method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model, store: false, reasoning: { effort: "none" },
-      instructions: `You are a conservative visual chart analyzer. First apply the visual quality gate, then analyze direction only if it passes. Return only schema-compliant JSON. Human-readable fields must be exclusively in ${language.native} (${language.name}).`,
-      input: [{ role: "user", content: [{ type: "input_text", text: prompt }, { type: "input_image", image_url: image, detail: "auto" }] }],
-      text: { format: { type: "json_schema", name: "trading_signal", strict: true, schema } }, max_output_tokens: 650
+      instructions: `You are a decisive visual chart analyzer. Apply the visual quality gate first. For every readable candlestick chart, choose the closest visible UP or DOWN direction and express uncertainty through confidence instead of refusing the signal. Return only schema-compliant JSON. Human-readable fields must be exclusively in ${language.native} (${language.name}).`,
+      input: [{ role: "user", content: [{ type: "input_text", text: prompt }, { type: "input_image", image_url: image, detail: "high" }] }],
+      text: { format: { type: "json_schema", name: "trading_signal", strict: true, schema } }, max_output_tokens: 900
     })
   });
   const data = await openaiRes.json();
@@ -191,11 +191,18 @@ async function handleAnalysis(req, res) {
     console.error("Invalid model JSON", outputText.slice(0, 1000));
     return res.status(502).json({ error: "invalid_model_output" });
   }
-  const result = normalizeSignal(parsed, minConfidence);
+  const result = normalizeSignal(parsed);
+  console.info("Analysis completed", {
+    signal: result.signal,
+    confidence: result.confidence,
+    quality: result.chart_quality,
+    readability: result.screenshot_readability,
+    locale
+  });
   return res.status(200).json({
     ok: true, result,
     meta: { timeframe, expiration_minutes: Number(expiration), locale, language: language.name, model,
-      min_confidence: minConfidence, quality_gate: "v2",
+      quality_gate: "v3", signal_policy: "closest_direction_on_valid_chart",
       disclaimer: "AI chart analysis does not guarantee the outcome of a trade." }
   });
 }
@@ -323,4 +330,3 @@ function getOutputText(response) {
   }
   return "";
 }
-function clamp(number, min, max) { return Number.isFinite(number) ? Math.max(min, Math.min(max, number)) : min; }

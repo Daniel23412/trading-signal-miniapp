@@ -118,8 +118,9 @@
       [".setting-panel:nth-child(2) .muted","minutes"],
       ["#analyzeBtn span:last-child","analyze"],["#screenInput .risk-note","riskInput"],
       [".scanner-card h2","loadingTitle"],[".result-kicker","resultKicker"],
-      [".confidence-row span","confidence"],[".result-info>div:first-child span","trend"],
-      [".result-info>div:nth-child(2) span","params"],[".reason-box span","why"],
+      ["#confidenceLabel","confidenceLabel"],["#confidenceHint","confidenceHint"],
+      [".result-info>div:first-child span","trend"],
+      [".result-info>div:nth-child(2) span","params"],["#reasonLabel","reasonLabel"],
       ["#newAnalysisBtn","newAnalysis"],["#screenResult .risk-note","riskResult"]
     ];
 

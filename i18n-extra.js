@@ -34,3 +34,35 @@
   });
   window.AI_I18N_EXTRA_KEYS = keys.slice();
 })();
+
+(() => {
+  "use strict";
+  const keys = [
+    "confidenceLabel", "confidenceHint", "signalWeak", "signalMedium",
+    "signalStrong", "reasonLabel", "directionExplanationFallback"
+  ];
+  const packs = {
+    ru: ["УВЕРЕННОСТЬ AI","Сила направления на этом скриншоте","ОСТОРОЖНЫЙ","СРЕДНИЙ","СИЛЬНЫЙ","ПРОСТОЕ ОБЪЯСНЕНИЕ","На последних видимых свечах это направление выражено сильнее. Процент показывает уверенность AI только по текущему скриншоту."],
+    en: ["AI CONFIDENCE","Direction strength from this screenshot","CAUTIOUS","MEDIUM","STRONG","SIMPLE EXPLANATION","The latest visible candles lean more strongly in this direction. The percentage is AI confidence for this screenshot only."],
+    de: ["AI-SICHERHEIT","Richtungsstärke in diesem Screenshot","VORSICHTIG","MITTEL","STARK","EINFACHE ERKLÄRUNG","Bei den letzten sichtbaren Kerzen ist diese Richtung stärker. Der Prozentsatz zeigt nur die AI-Sicherheit für diesen Screenshot."],
+    fr: ["CONFIANCE DE L’IA","Force de la direction sur cette capture","PRUDENT","MOYEN","FORT","EXPLICATION SIMPLE","Les dernières bougies visibles penchent davantage dans cette direction. Le pourcentage indique uniquement la confiance de l’IA pour cette capture."],
+    it: ["CONFIDENZA AI","Forza della direzione in questo screenshot","PRUDENTE","MEDIA","FORTE","SPIEGAZIONE SEMPLICE","Le ultime candele visibili indicano maggiormente questa direzione. La percentuale mostra solo la confidenza AI per questo screenshot."],
+    es: ["CONFIANZA DE LA IA","Fuerza de la dirección en esta captura","PRUDENTE","MEDIA","FUERTE","EXPLICACIÓN SIMPLE","Las últimas velas visibles se inclinan más hacia esta dirección. El porcentaje muestra solo la confianza de la IA para esta captura."],
+    pt: ["CONFIANÇA DA IA","Força da direção nesta imagem","CAUTELOSO","MÉDIO","FORTE","EXPLICAÇÃO SIMPLES","As últimas velas visíveis apontam mais para esta direção. A porcentagem mostra apenas a confiança da IA nesta imagem."],
+    ja: ["AIの確信度","この画像での方向の強さ","慎重","中","強い","かんたんな説明","直近のローソク足では、この方向がより強く見えます。この割合は、この画像だけに基づくAIの確信度です。"],
+    hi: ["AI विश्वास","इस स्क्रीनशॉट में दिशा की ताकत","सावधानी","मध्यम","मजबूत","सरल व्याख्या","आखिरी दिखाई देने वाली कैंडल इस दिशा को अधिक मजबूत दिखाती हैं। प्रतिशत केवल इस स्क्रीनशॉट पर AI का विश्वास बताता है।"],
+    id: ["KEYAKINAN AI","Kekuatan arah pada screenshot ini","HATI-HATI","SEDANG","KUAT","PENJELASAN SEDERHANA","Candlestick terakhir yang terlihat lebih condong ke arah ini. Persentase hanya menunjukkan keyakinan AI berdasarkan screenshot ini."],
+    ko: ["AI 확신도","이 스크린샷에서 보이는 방향의 강도","주의","보통","강함","쉬운 설명","최근 보이는 캔들은 이 방향이 더 강하다는 것을 보여 줍니다. 퍼센트는 이 스크린샷만을 기준으로 한 AI 확신도입니다."],
+    tr: ["AI GÜVENİ","Bu ekran görüntüsündeki yönün gücü","TEMKİNLİ","ORTA","GÜÇLÜ","BASİT AÇIKLAMA","Son görünen mumlar bu yönü daha güçlü gösteriyor. Yüzde yalnızca bu ekran görüntüsüne göre AI güvenini belirtir."],
+    uk: ["ВПЕВНЕНІСТЬ AI","Сила напрямку на цьому скриншоті","ОБЕРЕЖНИЙ","СЕРЕДНІЙ","СИЛЬНИЙ","ПРОСТЕ ПОЯСНЕННЯ","На останніх видимих свічках цей напрямок виражений сильніше. Відсоток показує впевненість AI лише за поточним скриншотом."],
+    sv: ["AI-SÄKERHET","Riktningens styrka i den här bilden","FÖRSIKTIG","MEDEL","STARK","ENKEL FÖRKLARING","De senaste synliga ljusen lutar tydligare åt den här riktningen. Procenten visar bara AI-säkerheten för denna bild."],
+    no: ["AI-SIKKERHET","Retningens styrke i dette skjermbildet","FORSIKTIG","MIDDELS","STERK","ENKEL FORKLARING","De siste synlige lysestakene heller tydeligere i denne retningen. Prosenten viser bare AI-sikkerheten for dette skjermbildet."],
+    zh: ["AI 置信度","当前截图中的方向强度","谨慎","中等","较强","简单说明","最近可见的蜡烛图更偏向这个方向。该百分比仅表示 AI 对当前截图分析的置信度。"]
+  };
+  window.AI_I18N = window.AI_I18N || {};
+  Object.entries(packs).forEach(([locale, values]) => {
+    const target = window.AI_I18N[locale] || (window.AI_I18N[locale] = {});
+    keys.forEach((key, index) => { target[key] = values[index]; });
+  });
+  window.AI_I18N_EXTRA_KEYS = [...new Set([...(window.AI_I18N_EXTRA_KEYS || []), ...keys])];
+})();

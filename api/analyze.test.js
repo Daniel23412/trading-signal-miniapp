@@ -18,9 +18,11 @@ test("analyze returns normalized signal with mocked OpenAI", async () => {
   const oldEnv = { ...process.env };
   process.env.REQUIRE_TELEGRAM_AUTH = "false";
   process.env.OPENAI_API_KEY = "test-key";
-  process.env.MIN_CONFIDENCE = "72";
+  let modelRequest;
 
-  global.fetch = async () => ({
+  global.fetch = async (_url, options) => {
+    modelRequest = JSON.parse(options.body);
+    return ({
     ok: true,
     status: 200,
     async json() {
@@ -35,6 +37,7 @@ test("analyze returns normalized signal with mocked OpenAI", async () => {
             quality_ok: true,
             quality_reason: "График читаемый.",
             signal: "UP",
+            direction_bias: "UP",
             confidence: 84,
             chart_quality: "good",
             trend: "восходящий",
@@ -44,7 +47,8 @@ test("analyze returns normalized signal with mocked OpenAI", async () => {
         }]
       };
     }
-  });
+    });
+  };
 
   const req = {
     method: "POST",
@@ -60,8 +64,13 @@ test("analyze returns normalized signal with mocked OpenAI", async () => {
   assert.equal(res.code, 200);
   assert.equal(res.body.result.signal, "UP");
   assert.equal(res.body.result.quality_ok, true);
-  assert.equal(res.body.meta.quality_gate, "v2");
+  assert.equal(res.body.meta.quality_gate, "v3");
+  assert.equal(res.body.meta.signal_policy, "closest_direction_on_valid_chart");
   assert.equal(res.body.meta.model, "gpt-5.6-luna");
+  assert.equal(modelRequest.input[0].content[1].detail, "high");
+  assert.match(modelRequest.input[0].content[0].text, /signal MUST be UP or DOWN/);
+  assert.match(modelRequest.input[0].content[0].text, /2 or 3 short, plain-language sentences/);
+  assert.match(modelRequest.instructions, /choose the closest visible UP or DOWN direction/);
 
   global.fetch = oldFetch;
   process.env = oldEnv;
